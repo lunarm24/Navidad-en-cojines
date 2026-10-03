@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Elige tus cojines navideños favoritos y pide tu cotización por WhatsApp.">
+  <title>Navidad en cojines</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <canvas class="snow-canvas" id="snow" aria-hidden="true"></canvas>
+  <div class="site-shell">
+    <!-- Estructura -->
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="#inicio" aria-label="Navidad en cojines, inicio">
+          <svg class="brand-tree" viewBox="0 0 28 34" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+            <path d="m14 2 7 9h-4l7 9h-6l6 8H4l6-8H4l7-9H7z" fill="#2f5a4d"/>
+            <path d="M12 28h4v5h-4z" fill="#a63d40"/>
+            <circle cx="14" cy="3" r="2" fill="#c4a052"/>
+          </svg>
+          <span>Navidad en cojines</span>
+        </a>
+        <button class="order-trigger" id="open-order" type="button" aria-label="Abrir mi pedido, 0 cojines">
+          <span>Mi pedido</span><span class="order-count" id="header-count" aria-live="polite">0</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="inicio">
+      <section class="hero container" aria-labelledby="hero-title">
+        <div class="hero-content">
+          <h1 id="hero-title">Cojines para una Navidad acogedora</h1>
+          <p class="hero-copy">Diseños hechos con cariño. Elige tus favoritos y cotiza por WhatsApp.</p>
+          <ul class="price-chips" aria-label="Precios por cantidad de cojines">
+            <li><span>1 unidad</span><strong>$40.000</strong></li>
+            <li><span>2 unidades</span><strong>$70.000</strong></li>
+            <li><span>3 unidades</span><strong>$100.000</strong></li>
+            <li><span>4 unidades</span><strong>$130.000</strong></li>
+          </ul>
+        </div>
+        <div class="hero-art" id="hero-art" aria-hidden="true">
+          <div class="hero-pillow hero-pillow-one"></div>
+          <div class="hero-pillow hero-pillow-two"></div>
+          <div class="hero-pillow hero-pillow-three"></div>
+        </div>
+      </section>
+
+      <section class="collection container" id="coleccion" aria-labelledby="collection-title">
+        <div class="section-heading">
+          <h2 id="collection-title">Catálogo</h2>
+        </div>
+        <div class="product-grid" id="product-grid"></div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer" aria-label="Pie de página"></footer>
+  </div>
+
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="order-drawer" id="order-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" aria-hidden="true" inert>
+    <div class="drawer-heading">
+      <h2 id="drawer-title">Mi pedido</h2>
+      <button class="icon-button" id="close-order" type="button" aria-label="Cerrar mi pedido">×</button>
+    </div>
+    <div class="cart-list" id="cart-list" aria-live="polite"></div>
+    <div class="cart-summary">
+      <p class="summary-line"><span>Total de cojines</span><strong id="summary-count">0</strong></p>
+      <p class="summary-line"><span>Valor estimado</span><strong id="summary-total">$0</strong></p>
+      <a class="whatsapp-button" id="whatsapp-link" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Enviar cotización por WhatsApp</a>
+    </div>
+  </aside>
+</body>
+</html>

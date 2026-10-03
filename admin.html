@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e8f0eb">
+  <title>Administrar inventario | Navidad en cojines</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body data-page="admin">
+  <div class="site-shell">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="/" aria-label="Navidad en cojines, tienda">
+          <svg class="brand-tree" viewBox="0 0 28 34" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+            <path d="m14 2 7 9h-4l7 9h-6l6 8H4l6-8H4l7-9H7z" fill="#2f5a4d"/>
+            <path d="M12 28h4v5h-4z" fill="#a63d40"/>
+            <circle cx="14" cy="3" r="2" fill="#c4a052"/>
+          </svg>
+          <span>Navidad en cojines</span>
+        </a>
+        <a class="admin-back" href="/">Volver a la tienda</a>
+      </div>
+    </header>
+
+    <main class="admin-page container">
+      <div class="admin-heading">
+        <p class="admin-kicker">Administración</p>
+        <h1>Inventario de cojines</h1>
+        <p>Actualiza las unidades disponibles por referencia. Solo puedes eliminar un cojín cuando su inventario llegue a cero.</p>
+      </div>
+      <section class="admin-panel" aria-label="Existencias por referencia">
+        <div class="inventory-list" id="inventory-list"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer" aria-label="Pie de página"></footer>
+  </div>
+</body>
+</html>
