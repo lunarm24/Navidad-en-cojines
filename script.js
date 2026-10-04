@@ -1,6 +1,6 @@
 /* Productos */
 const PHONE = "573217096231";
-const INVENTORY_FILE = new URL("inventory.json", document.querySelector('script[src$="script.js"]').src).href;
+const INVENTORY_FILE = new URL("inventory.json", document.currentScript.src).href;
 const defaultProducts = [
   { id: "pino", name: "Árbol de pino", description: "Un clásico verde para llenar de calma cada rincón.", motif: "tree", fabric: "#e8eee5", ink: "#315a48", accent: "#b8544d" },
   { id: "copo", name: "Copo de nieve", description: "Copos delicados sobre una noche de invierno.", motif: "snowflake", fabric: "#e7edf0", ink: "#597887", accent: "#fffdf9" },

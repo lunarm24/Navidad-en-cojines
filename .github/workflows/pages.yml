@@ -33,7 +33,7 @@ jobs:
           cp admin.html _site/admin/index.html
           sed -i \
             -e 's|href="styles.css"|href="../styles.css"|g' \
-            -e 's|src="script.js"|src="../script.js"|g' \
+            -e 's|src="script.js?v=inventory-manual-2"|src="../script.js?v=inventory-manual-2"|g' \
             -e 's|href="./"|href="../"|g' \
             _site/admin/index.html
       - name: Subir archivos del sitio
