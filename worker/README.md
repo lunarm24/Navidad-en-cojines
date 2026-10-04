@@ -39,8 +39,8 @@ Escribe los secretos directamente en la terminal cuando Wrangler los solicite.
 
 ## GitHub Pages
 
-En GitHub abre **Settings > Pages** y selecciona **GitHub Actions** como fuente. Esta página aún no aparece habilitada en el repo. Luego sube los archivos de este proyecto a `main`; el workflow `.github/workflows/pages.yml` publicará el sitio.
+GitHub Pages ya está publicado usando **GitHub Actions**. El workflow `.github/workflows/pages.yml` vuelve a publicar el sitio con cada push a `main`.
 
 El Worker crea un commit en `inventory.json` al cambiar el stock. Ese push vuelve a ejecutar el workflow de Pages. El sitio también consulta el Worker para mostrar existencias actuales mientras Pages termina de desplegar. El workflow publica solo archivos de tienda; no publica el código ni la configuración del Worker.
 
-La tienda queda en `https://lunarm24.github.io/Navidad-en-cojines/` y el panel en `https://lunarm24.github.io/Navidad-en-cojines/admin/`. También se conserva la página de origen `admin.html`. La clave de administrador se escribe en el panel y se mantiene solo en memoria durante esa sesión.
+La tienda está en `https://lunarm24.github.io/Navidad-en-cojines/` y el panel en `https://lunarm24.github.io/Navidad-en-cojines/admin`. También se conserva la página de origen `admin.html`. La clave de administrador se escribe en el panel y se mantiene solo en memoria durante esa sesión.
