@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <script src="config.js"></script>
   <script src="script.js" defer></script>
 </head>
 <body data-page="admin">
@@ -32,16 +31,12 @@
       <div class="admin-heading">
         <p class="admin-kicker">Administración</p>
         <h1>Inventario de cojines</h1>
-        <p>Actualiza las unidades disponibles por referencia. Solo puedes eliminar un cojín cuando su inventario llegue a cero.</p>
+        <p>Consulta las existencias de cada referencia.</p>
       </div>
-      <form class="admin-auth" id="admin-auth">
-        <label for="admin-password">Clave de administrador</label>
-        <div class="admin-auth-controls">
-          <input id="admin-password" name="password" type="password" autocomplete="current-password" required>
-          <button class="admin-auth-button" type="submit">Conectar</button>
-        </div>
+      <div class="admin-edit-area">
+        <a class="admin-edit" href="https://github.com/lunarm24/Navidad-en-cojines/edit/main/inventory.json" target="_blank" rel="noopener noreferrer">Editar inventario en GitHub</a>
         <p id="admin-status" role="status" aria-live="polite"></p>
-      </form>
+      </div>
       <section class="admin-panel" aria-label="Existencias por referencia">
         <div class="inventory-list" id="inventory-list"></div>
       </section>

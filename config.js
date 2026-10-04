@@ -1,1 +1,0 @@
-window.NAVIDAD_INVENTORY_API = "";

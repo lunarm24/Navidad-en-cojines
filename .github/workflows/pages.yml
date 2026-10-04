@@ -28,12 +28,11 @@ jobs:
       - name: Preparar archivos públicos
         run: |
           mkdir _site
-          cp index.html admin.html styles.css script.js config.js inventory.json _site/
+          cp index.html admin.html styles.css script.js inventory.json _site/
           mkdir -p _site/admin
           cp admin.html _site/admin/index.html
           sed -i \
             -e 's|href="styles.css"|href="../styles.css"|g' \
-            -e 's|src="config.js"|src="../config.js"|g' \
             -e 's|src="script.js"|src="../script.js"|g' \
             -e 's|href="./"|href="../"|g' \
             _site/admin/index.html

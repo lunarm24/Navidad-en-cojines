@@ -1,6 +1,5 @@
 /* Productos */
 const PHONE = "573217096231";
-const INVENTORY_API = String(window.NAVIDAD_INVENTORY_API || "").replace(/\/+$/, "");
 const INVENTORY_FILE = new URL("inventory.json", document.querySelector('script[src$="script.js"]').src).href;
 const defaultProducts = [
   { id: "pino", name: "Árbol de pino", description: "Un clásico verde para llenar de calma cada rincón.", motif: "tree", fabric: "#e8eee5", ink: "#315a48", accent: "#b8544d" },
@@ -13,13 +12,9 @@ const defaultProducts = [
   { id: "bola", name: "Bola de Navidad", description: "Un adorno clásico para vestir tu sofá de fiesta.", motif: "ornament", fabric: "#e9e7d8", ink: "#69774d", accent: "#c4a052" }
 ];
 let products = [];
-let adminPassword = "";
-let inventorySaving = false;
-const inventoryChannel = "BroadcastChannel" in window ? new BroadcastChannel("navidad-en-cojines-inventory") : null;
 
 async function loadInventory() {
-  const url = INVENTORY_API ? `${INVENTORY_API}/inventory` : `${INVENTORY_FILE}?v=${Date.now()}`;
-  const response = await fetch(url, { cache: "no-store" });
+  const response = await fetch(`${INVENTORY_FILE}?v=${Date.now()}`, { cache: "no-store" });
   if (!response.ok) throw new Error(`No se pudo cargar el inventario (${response.status}).`);
   const inventory = await response.json();
   if (!inventory || typeof inventory !== "object" || Array.isArray(inventory)) {
@@ -29,11 +24,10 @@ async function loadInventory() {
 }
 
 function productsFromInventory(inventory) {
-  return defaultProducts.flatMap((product) => {
-    if (!Object.prototype.hasOwnProperty.call(inventory, product.id)) return [];
-    const stock = inventory[product.id];
-    if (!Number.isInteger(stock) || stock < 0) return [];
-    return [{ ...product, stock }];
+  return defaultProducts.map((product) => {
+    const value = inventory[product.id];
+    const stock = Number.isInteger(value) && value >= 0 ? value : 0;
+    return { ...product, stock, disponible: stock > 0 };
   });
 }
 
@@ -70,7 +64,6 @@ const backdrop = document.querySelector("#drawer-backdrop");
 const openButton = document.querySelector("#open-order");
 const closeButton = document.querySelector("#close-order");
 const inventoryList = document.querySelector("#inventory-list");
-const adminAuth = document.querySelector("#admin-auth");
 const adminStatus = document.querySelector("#admin-status");
 const storeStatus = document.querySelector("#store-status");
 let lastFocusedElement = null;
@@ -92,18 +85,6 @@ function updateVisibleInventory(inventory) {
   if (inventoryList) renderInventory();
 }
 
-async function sendInventoryChange(change) {
-  if (!INVENTORY_API || !adminPassword) throw new Error("Configura y conecta el servicio de inventario primero.");
-  const response = await fetch(`${INVENTORY_API}/inventory`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...change, password: adminPassword })
-  });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || "No se pudo guardar el cambio.");
-  return result.inventory;
-}
-
 function setAdminStatus(message, isError = false) {
   if (!adminStatus) return;
   adminStatus.textContent = message;
@@ -122,12 +103,12 @@ function cartQuantity() {
 
 function renderProducts() {
   productGrid.innerHTML = products.length ? products.map((product) => `
-    <article class="product-card">
+    <article class="product-card" data-disponible="${product.disponible}">
       ${cushionSvg(product)}
       <div class="product-info">
         <h3>${product.name}</h3>
         <p class="product-description">${product.description}</p>
-        <button class="add-button" type="button" data-add="${product.id}" aria-label="Agregar ${product.name} al pedido" ${product.stock <= (cart.get(product.id) || 0) ? "disabled" : ""}>${product.stock === 0 ? "Agotado" : product.stock <= (cart.get(product.id) || 0) ? "Máximo en el pedido" : "Agregar al pedido"}</button>
+        <button class="add-button" type="button" data-add="${product.id}" aria-label="Agregar ${product.name} al pedido" ${!product.disponible || product.stock <= (cart.get(product.id) || 0) ? "disabled" : ""}>${!product.disponible ? "Agotado" : product.stock <= (cart.get(product.id) || 0) ? "Máximo en el pedido" : "Agregar al pedido"}</button>
       </div>
     </article>`).join("") : `<p class="inventory-empty">No hay cojines disponibles en este momento.</p>`;
   const heroProducts = ["muneco", "pino", "cuadros"].map((id) => products.find((product) => product.id === id) || products[0]).filter(Boolean);
@@ -149,12 +130,8 @@ function renderInventory() {
         ${cushionSvg(product)}
         <strong>${product.name}</strong>
       </div>
-      <div class="inventory-controls" aria-label="Inventario de ${product.name}">
-        <button class="quantity-button" type="button" data-stock="${product.id}" data-delta="-1" aria-label="Restar una unidad de ${product.name}" ${product.stock === 0 || !adminPassword || inventorySaving ? "disabled" : ""}>−</button>
-        <span class="inventory-quantity">${product.stock} ${product.stock === 1 ? "unidad" : "unidades"}</span>
-        <button class="quantity-button" type="button" data-stock="${product.id}" data-delta="1" aria-label="Sumar una unidad de ${product.name}" ${!adminPassword || inventorySaving ? "disabled" : ""}>+</button>
-      </div>
-      <button class="inventory-delete" type="button" data-delete="${product.id}" ${product.stock > 0 || !adminPassword || inventorySaving ? "disabled" : ""}>Eliminar</button>
+      <span class="inventory-quantity">${product.stock} ${product.stock === 1 ? "unidad" : "unidades"}</span>
+      <span class="inventory-availability ${product.disponible ? "is-available" : "is-sold-out"}">${product.disponible ? "Disponible" : "Agotado"}</span>
     </div>`).join("");
 }
 
@@ -202,49 +179,11 @@ function renderCart() {
 
 function addProduct(id) {
   const product = products.find((item) => item.id === id);
-  if (!product || (cart.get(id) || 0) >= product.stock) return false;
+  if (!product || !product.disponible || (cart.get(id) || 0) >= product.stock) return false;
   cart.set(id, (cart.get(id) || 0) + 1);
   renderCart();
   renderProducts();
   return true;
-}
-
-async function updateStock(id, delta) {
-  const product = products.find((item) => item.id === id);
-  if (!product || inventorySaving || product.stock + delta < 0) return;
-  inventorySaving = true;
-  renderInventory();
-  setAdminStatus("Guardando cambio en GitHub...");
-  try {
-    const inventory = await sendInventoryChange({ productId: id, action: "adjust", delta });
-    updateVisibleInventory(inventory);
-    inventoryChannel?.postMessage(inventory);
-    setAdminStatus("Cambio guardado en el repositorio. GitHub Pages se actualizará al terminar el despliegue.");
-  } catch (error) {
-    setAdminStatus(error.message, true);
-  } finally {
-    inventorySaving = false;
-    renderInventory();
-  }
-}
-
-async function deleteProduct(id) {
-  const product = products.find((item) => item.id === id);
-  if (!product || product.stock !== 0 || inventorySaving) return;
-  inventorySaving = true;
-  renderInventory();
-  setAdminStatus("Eliminando referencia del repositorio...");
-  try {
-    const inventory = await sendInventoryChange({ productId: id, action: "delete" });
-    updateVisibleInventory(inventory);
-    inventoryChannel?.postMessage(inventory);
-    setAdminStatus("Referencia eliminada del repositorio. GitHub Pages se actualizará al terminar el despliegue.");
-  } catch (error) {
-    setAdminStatus(error.message, true);
-  } finally {
-    inventorySaving = false;
-    renderInventory();
-  }
 }
 
 function openDrawer() {
@@ -274,52 +213,9 @@ function closeDrawer() {
 }
 
 async function initializeAdmin() {
-  inventoryList.addEventListener("click", (event) => {
-    const stockButton = event.target.closest("[data-stock]");
-    if (stockButton) {
-      void updateStock(stockButton.dataset.stock, Number(stockButton.dataset.delta));
-      return;
-    }
-    const deleteButton = event.target.closest("[data-delete]");
-    if (deleteButton) void deleteProduct(deleteButton.dataset.delete);
-  });
-
-  adminAuth.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const passwordInput = adminAuth.querySelector("#admin-password");
-    const password = passwordInput.value;
-    const button = adminAuth.querySelector("button[type='submit']");
-    if (!INVENTORY_API) {
-      setAdminStatus("Configura y despliega el Worker para guardar cambios compartidos.", true);
-      return;
-    }
-    button.disabled = true;
-    setAdminStatus("Verificando acceso...");
-    try {
-      const response = await fetch(`${INVENTORY_API}/auth`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password })
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "No se pudo verificar la clave.");
-      adminPassword = password;
-      passwordInput.value = "";
-      renderInventory();
-      setAdminStatus("Conectado. Los cambios se guardarán en GitHub.");
-    } catch (error) {
-      setAdminStatus(error.message, true);
-    } finally {
-      button.disabled = false;
-    }
-  });
-
-  adminAuth.querySelector("button[type='submit']").disabled = !INVENTORY_API;
-  if (!INVENTORY_API) {
-    setAdminStatus("El Worker no está configurado; aquí solo puedes consultar el inventario.", true);
-  }
   try {
     products = await loadProducts();
+    setAdminStatus("Existencias cargadas desde inventory.json.");
   } catch (error) {
     setAdminStatus(error.message, true);
   }
@@ -345,7 +241,7 @@ async function initializeStorefront() {
     const product = products.find((item) => item.id === id);
     if (!product) return;
     const next = (cart.get(id) || 0) + Number(button.dataset.delta);
-    if (next > product.stock) return;
+    if (!product.disponible || next > product.stock) return;
     if (next <= 0) cart.delete(id);
     else cart.set(id, next);
     renderCart();
@@ -374,21 +270,10 @@ async function initializeStorefront() {
   try {
     updateVisibleInventory(await loadInventory());
   } catch (error) {
-    updateVisibleInventory({});
+    products = [];
+    renderProducts();
+    renderCart();
     if (storeStatus) storeStatus.textContent = `${error.message} Vuelve a cargar la página para intentarlo de nuevo.`;
-  }
-  if (INVENTORY_API) {
-    window.setInterval(() => { void refreshStoreInventory(); }, 60000);
-    window.addEventListener("focus", () => { void refreshStoreInventory(); });
-  }
-}
-
-async function refreshStoreInventory() {
-  try {
-    updateVisibleInventory(await loadInventory());
-    if (storeStatus) storeStatus.textContent = "";
-  } catch (error) {
-    if (storeStatus) storeStatus.textContent = error.message;
   }
 }
 
@@ -472,7 +357,3 @@ function initializeSnow() {
 
 if (document.body.dataset.page === "admin") void initializeAdmin();
 else initializeStorefront();
-
-inventoryChannel?.addEventListener("message", (event) => {
-  updateVisibleInventory(event.data);
-});
