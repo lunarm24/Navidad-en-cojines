@@ -9,13 +9,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
   <script src="script.js" defer></script>
 </head>
 <body data-page="admin">
   <div class="site-shell">
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="/" aria-label="Navidad en cojines, tienda">
+        <a class="brand" href="./" aria-label="Navidad en cojines, tienda">
           <svg class="brand-tree" viewBox="0 0 28 34" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
             <path d="m14 2 7 9h-4l7 9h-6l6 8H4l6-8H4l7-9H7z" fill="#2f5a4d"/>
             <path d="M12 28h4v5h-4z" fill="#a63d40"/>
@@ -23,16 +24,24 @@
           </svg>
           <span>Navidad en cojines</span>
         </a>
-        <a class="admin-back" href="/">Volver a la tienda</a>
+        <a class="admin-back" href="./">Volver a la tienda</a>
       </div>
     </header>
 
-    <main class="admin-page container">
+    <main class="admin-page container" data-page="admin">
       <div class="admin-heading">
         <p class="admin-kicker">Administración</p>
         <h1>Inventario de cojines</h1>
         <p>Actualiza las unidades disponibles por referencia. Solo puedes eliminar un cojín cuando su inventario llegue a cero.</p>
       </div>
+      <form class="admin-auth" id="admin-auth">
+        <label for="admin-password">Clave de administrador</label>
+        <div class="admin-auth-controls">
+          <input id="admin-password" name="password" type="password" autocomplete="current-password" required>
+          <button class="admin-auth-button" type="submit">Conectar</button>
+        </div>
+        <p id="admin-status" role="status" aria-live="polite"></p>
+      </form>
       <section class="admin-panel" aria-label="Existencias por referencia">
         <div class="inventory-list" id="inventory-list"></div>
       </section>

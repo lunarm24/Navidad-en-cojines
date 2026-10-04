@@ -1,6 +1,7 @@
 /* Productos */
 const PHONE = "573217096231";
-const INVENTORY_KEY = "navidad-en-cojines-inventory-v1";
+const INVENTORY_API = String(window.NAVIDAD_INVENTORY_API || "").replace(/\/+$/, "");
+const INVENTORY_FILE = new URL("inventory.json", document.querySelector('script[src$="script.js"]').src).href;
 const defaultProducts = [
   { id: "pino", name: "Árbol de pino", description: "Un clásico verde para llenar de calma cada rincón.", motif: "tree", fabric: "#e8eee5", ink: "#315a48", accent: "#b8544d" },
   { id: "copo", name: "Copo de nieve", description: "Copos delicados sobre una noche de invierno.", motif: "snowflake", fabric: "#e7edf0", ink: "#597887", accent: "#fffdf9" },
@@ -11,33 +12,33 @@ const defaultProducts = [
   { id: "cuadros", name: "Cuadros de cabaña", description: "El encanto cálido de una tarde junto al fuego.", motif: "plaid", fabric: "#eee2dc", ink: "#8c4944", accent: "#e1c6b1" },
   { id: "bola", name: "Bola de Navidad", description: "Un adorno clásico para vestir tu sofá de fiesta.", motif: "ornament", fabric: "#e9e7d8", ink: "#69774d", accent: "#c4a052" }
 ];
-let products = loadProducts();
+let products = [];
+let adminPassword = "";
+let inventorySaving = false;
+const inventoryChannel = "BroadcastChannel" in window ? new BroadcastChannel("navidad-en-cojines-inventory") : null;
 
-function loadProducts() {
-  let savedProducts;
-  try {
-    savedProducts = JSON.parse(localStorage.getItem(INVENTORY_KEY));
-  } catch {
-    savedProducts = null;
+async function loadInventory() {
+  const url = INVENTORY_API ? `${INVENTORY_API}/inventory` : `${INVENTORY_FILE}?v=${Date.now()}`;
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`No se pudo cargar el inventario (${response.status}).`);
+  const inventory = await response.json();
+  if (!inventory || typeof inventory !== "object" || Array.isArray(inventory)) {
+    throw new Error("El archivo de inventario no tiene un formato válido.");
   }
-  if (!Array.isArray(savedProducts)) {
-    return defaultProducts.map((product) => ({ ...product, stock: 2 }));
-  }
-  return savedProducts.flatMap((savedProduct) => {
-    if (!savedProduct || typeof savedProduct.id !== "string") return [];
-    const product = defaultProducts.find((item) => item.id === savedProduct.id);
-    if (!product) return [];
-    const stock = Number.isInteger(savedProduct.stock) && savedProduct.stock >= 0 ? savedProduct.stock : 2;
+  return inventory;
+}
+
+function productsFromInventory(inventory) {
+  return defaultProducts.flatMap((product) => {
+    if (!Object.prototype.hasOwnProperty.call(inventory, product.id)) return [];
+    const stock = inventory[product.id];
+    if (!Number.isInteger(stock) || stock < 0) return [];
     return [{ ...product, stock }];
   });
 }
 
-function saveProducts() {
-  try {
-    localStorage.setItem(INVENTORY_KEY, JSON.stringify(products.map(({ id, stock }) => ({ id, stock }))));
-  } catch {
-    return;
-  }
+async function loadProducts() {
+  return productsFromInventory(await loadInventory());
 }
 
 /* Ilustraciones SVG reemplazables por fotografías usando product.image. */
@@ -69,11 +70,44 @@ const backdrop = document.querySelector("#drawer-backdrop");
 const openButton = document.querySelector("#open-order");
 const closeButton = document.querySelector("#close-order");
 const inventoryList = document.querySelector("#inventory-list");
+const adminAuth = document.querySelector("#admin-auth");
+const adminStatus = document.querySelector("#admin-status");
+const storeStatus = document.querySelector("#store-status");
 let lastFocusedElement = null;
 let drawerTimer;
 
 function formatPrice(value) {
   return `$${money.format(value)}`;
+}
+
+function updateVisibleInventory(inventory) {
+  products = productsFromInventory(inventory);
+  for (const [id, quantity] of cart) {
+    const product = products.find((item) => item.id === id);
+    if (!product || product.stock === 0) cart.delete(id);
+    else if (quantity > product.stock) cart.set(id, product.stock);
+  }
+  if (productGrid) renderProducts();
+  if (cartList) renderCart();
+  if (inventoryList) renderInventory();
+}
+
+async function sendInventoryChange(change) {
+  if (!INVENTORY_API || !adminPassword) throw new Error("Configura y conecta el servicio de inventario primero.");
+  const response = await fetch(`${INVENTORY_API}/inventory`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...change, password: adminPassword })
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "No se pudo guardar el cambio.");
+  return result.inventory;
+}
+
+function setAdminStatus(message, isError = false) {
+  if (!adminStatus) return;
+  adminStatus.textContent = message;
+  adminStatus.dataset.error = String(isError);
 }
 
 function totalPrice(quantity) {
@@ -116,11 +150,11 @@ function renderInventory() {
         <strong>${product.name}</strong>
       </div>
       <div class="inventory-controls" aria-label="Inventario de ${product.name}">
-        <button class="quantity-button" type="button" data-stock="${product.id}" data-delta="-1" aria-label="Restar una unidad de ${product.name}" ${product.stock === 0 ? "disabled" : ""}>−</button>
+        <button class="quantity-button" type="button" data-stock="${product.id}" data-delta="-1" aria-label="Restar una unidad de ${product.name}" ${product.stock === 0 || !adminPassword || inventorySaving ? "disabled" : ""}>−</button>
         <span class="inventory-quantity">${product.stock} ${product.stock === 1 ? "unidad" : "unidades"}</span>
-        <button class="quantity-button" type="button" data-stock="${product.id}" data-delta="1" aria-label="Sumar una unidad de ${product.name}">+</button>
+        <button class="quantity-button" type="button" data-stock="${product.id}" data-delta="1" aria-label="Sumar una unidad de ${product.name}" ${!adminPassword || inventorySaving ? "disabled" : ""}>+</button>
       </div>
-      <button class="inventory-delete" type="button" data-delete="${product.id}" ${product.stock > 0 ? "disabled" : ""}>Eliminar</button>
+      <button class="inventory-delete" type="button" data-delete="${product.id}" ${product.stock > 0 || !adminPassword || inventorySaving ? "disabled" : ""}>Eliminar</button>
     </div>`).join("");
 }
 
@@ -175,30 +209,42 @@ function addProduct(id) {
   return true;
 }
 
-function updateStock(id, delta) {
+async function updateStock(id, delta) {
   const product = products.find((item) => item.id === id);
-  if (!product) return;
-  product.stock = Math.max(0, product.stock + delta);
-  const inCart = cart.get(id) || 0;
-  if (inCart > product.stock) {
-    if (product.stock === 0) cart.delete(id);
-    else cart.set(id, product.stock);
+  if (!product || inventorySaving || product.stock + delta < 0) return;
+  inventorySaving = true;
+  renderInventory();
+  setAdminStatus("Guardando cambio en GitHub...");
+  try {
+    const inventory = await sendInventoryChange({ productId: id, action: "adjust", delta });
+    updateVisibleInventory(inventory);
+    inventoryChannel?.postMessage(inventory);
+    setAdminStatus("Cambio guardado en el repositorio. GitHub Pages se actualizará al terminar el despliegue.");
+  } catch (error) {
+    setAdminStatus(error.message, true);
+  } finally {
+    inventorySaving = false;
+    renderInventory();
   }
-  saveProducts();
-  if (productGrid) renderProducts();
-  if (cartList) renderCart();
-  if (inventoryList) renderInventory();
 }
 
-function deleteProduct(id) {
+async function deleteProduct(id) {
   const product = products.find((item) => item.id === id);
-  if (!product || product.stock !== 0) return;
-  products = products.filter((item) => item.id !== id);
-  cart.delete(id);
-  saveProducts();
-  if (productGrid) renderProducts();
-  if (cartList) renderCart();
-  if (inventoryList) renderInventory();
+  if (!product || product.stock !== 0 || inventorySaving) return;
+  inventorySaving = true;
+  renderInventory();
+  setAdminStatus("Eliminando referencia del repositorio...");
+  try {
+    const inventory = await sendInventoryChange({ productId: id, action: "delete" });
+    updateVisibleInventory(inventory);
+    inventoryChannel?.postMessage(inventory);
+    setAdminStatus("Referencia eliminada del repositorio. GitHub Pages se actualizará al terminar el despliegue.");
+  } catch (error) {
+    setAdminStatus(error.message, true);
+  } finally {
+    inventorySaving = false;
+    renderInventory();
+  }
 }
 
 function openDrawer() {
@@ -227,20 +273,60 @@ function closeDrawer() {
   drawerTimer = window.setTimeout(() => { backdrop.hidden = true; }, 280);
 }
 
-function initializeAdmin() {
+async function initializeAdmin() {
   inventoryList.addEventListener("click", (event) => {
     const stockButton = event.target.closest("[data-stock]");
     if (stockButton) {
-      updateStock(stockButton.dataset.stock, Number(stockButton.dataset.delta));
+      void updateStock(stockButton.dataset.stock, Number(stockButton.dataset.delta));
       return;
     }
     const deleteButton = event.target.closest("[data-delete]");
-    if (deleteButton) deleteProduct(deleteButton.dataset.delete);
+    if (deleteButton) void deleteProduct(deleteButton.dataset.delete);
   });
+
+  adminAuth.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const passwordInput = adminAuth.querySelector("#admin-password");
+    const password = passwordInput.value;
+    const button = adminAuth.querySelector("button[type='submit']");
+    if (!INVENTORY_API) {
+      setAdminStatus("Configura y despliega el Worker para guardar cambios compartidos.", true);
+      return;
+    }
+    button.disabled = true;
+    setAdminStatus("Verificando acceso...");
+    try {
+      const response = await fetch(`${INVENTORY_API}/auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "No se pudo verificar la clave.");
+      adminPassword = password;
+      passwordInput.value = "";
+      renderInventory();
+      setAdminStatus("Conectado. Los cambios se guardarán en GitHub.");
+    } catch (error) {
+      setAdminStatus(error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  adminAuth.querySelector("button[type='submit']").disabled = !INVENTORY_API;
+  if (!INVENTORY_API) {
+    setAdminStatus("El Worker no está configurado; aquí solo puedes consultar el inventario.", true);
+  }
+  try {
+    products = await loadProducts();
+  } catch (error) {
+    setAdminStatus(error.message, true);
+  }
   renderInventory();
 }
 
-function initializeStorefront() {
+async function initializeStorefront() {
   productGrid.addEventListener("click", (event) => {
     const button = event.target.closest("[data-add]");
     if (!button) return;
@@ -284,9 +370,26 @@ function initializeStorefront() {
     }
   });
 
-  renderProducts();
-  renderCart();
   initializeSnow();
+  try {
+    updateVisibleInventory(await loadInventory());
+  } catch (error) {
+    updateVisibleInventory({});
+    if (storeStatus) storeStatus.textContent = `${error.message} Vuelve a cargar la página para intentarlo de nuevo.`;
+  }
+  if (INVENTORY_API) {
+    window.setInterval(() => { void refreshStoreInventory(); }, 60000);
+    window.addEventListener("focus", () => { void refreshStoreInventory(); });
+  }
+}
+
+async function refreshStoreInventory() {
+  try {
+    updateVisibleInventory(await loadInventory());
+    if (storeStatus) storeStatus.textContent = "";
+  } catch (error) {
+    if (storeStatus) storeStatus.textContent = error.message;
+  }
 }
 
 function initializeSnow() {
@@ -367,18 +470,9 @@ function initializeSnow() {
   reducedMotion.addEventListener("change", updateSnowMotion);
 }
 
-if (document.body.dataset.page === "admin") initializeAdmin();
+if (document.body.dataset.page === "admin") void initializeAdmin();
 else initializeStorefront();
 
-window.addEventListener("storage", (event) => {
-  if (event.key !== INVENTORY_KEY) return;
-  products = loadProducts();
-  for (const [id, quantity] of cart) {
-    const product = products.find((item) => item.id === id);
-    if (!product || product.stock === 0) cart.delete(id);
-    else if (quantity > product.stock) cart.set(id, product.stock);
-  }
-  if (productGrid) renderProducts();
-  if (cartList) renderCart();
-  if (inventoryList) renderInventory();
+inventoryChannel?.addEventListener("message", (event) => {
+  updateVisibleInventory(event.data);
 });

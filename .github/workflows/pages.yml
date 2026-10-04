@@ -1,0 +1,46 @@
+name: Publicar GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener el repositorio
+        uses: actions/checkout@v4
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Preparar archivos públicos
+        run: |
+          mkdir _site
+          cp index.html admin.html styles.css script.js config.js inventory.json _site/
+          mkdir -p _site/admin
+          cp admin.html _site/admin/index.html
+          sed -i \
+            -e 's|href="styles.css"|href="../styles.css"|g' \
+            -e 's|src="config.js"|src="../config.js"|g' \
+            -e 's|src="script.js"|src="../script.js"|g' \
+            -e 's|href="./"|href="../"|g' \
+            _site/admin/index.html
+      - name: Subir archivos del sitio
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Publicar el sitio
+        id: deployment
+        uses: actions/deploy-pages@v4
