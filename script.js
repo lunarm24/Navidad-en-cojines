@@ -1,15 +1,32 @@
 /* Productos */
 const PHONE = "573217096231";
 const INVENTORY_FILE = new URL("inventory.json", document.currentScript.src).href;
+const ASSET_BASE = new URL(".", document.currentScript.src);
 const defaultProducts = [
-  { id: "pino", name: "Árbol de pino", description: "Un clásico verde para llenar de calma cada rincón.", motif: "tree", fabric: "#e8eee5", ink: "#315a48", accent: "#b8544d" },
-  { id: "copo", name: "Copo de nieve", description: "Copos delicados sobre una noche de invierno.", motif: "snowflake", fabric: "#e7edf0", ink: "#597887", accent: "#fffdf9" },
-  { id: "estrella", name: "Estrella dorada", description: "Un brillo sereno para las noches especiales.", motif: "star", fabric: "#eee6d5", ink: "#b58b39", accent: "#fffdf9" },
-  { id: "baston", name: "Bastón de caramelo", description: "Rayas festivas con un toque dulce y tradicional.", motif: "candy", fabric: "#f2e5df", ink: "#a63d40", accent: "#fffdf9" },
-  { id: "lunares", name: "Lunares de invierno", description: "Puntitos de nieve en una tela suave y luminosa.", motif: "dots", fabric: "#e7e9e0", ink: "#64786a", accent: "#fffdf9" },
-  { id: "muneco", name: "Muñeco de nieve", description: "Una sonrisa tierna que encanta a toda la familia.", motif: "snowman", fabric: "#e8edf0", ink: "#536a71", accent: "#b8544d" },
-  { id: "cuadros", name: "Cuadros de cabaña", description: "El encanto cálido de una tarde junto al fuego.", motif: "plaid", fabric: "#eee2dc", ink: "#8c4944", accent: "#e1c6b1" },
-  { id: "bola", name: "Bola de Navidad", description: "Un adorno clásico para vestir tu sofá de fiesta.", motif: "ornament", fabric: "#e9e7d8", ink: "#69774d", accent: "#c4a052" }
+  { id: "1", name: "Ciervo y conejo", description: "Bordado navideño de ciervo y conejo.", image: "imagenes/1. Cojín bordado de invierno con ciervo y conejo.png" },
+  { id: "2", name: "Santa y árbol", description: "Bordado navideño de Santa junto al árbol.", image: "imagenes/2. Cojín navideño bordado con Santa y árbol.png" },
+  { id: "3", name: "Reno y muñeco", description: "Bordado de reno y muñeco de nieve.", image: "imagenes/3. Cojín navideño bordado con reno y muñeco de nieve.png" },
+  { id: "4", name: "Reno y árbol", description: "Bordado navideño de un reno junto al árbol.", image: "imagenes/4. Cojín bordado navideño con reno y árbol.png" },
+  { id: "5", name: "Muñeco de nieve", description: "Muñeco tejido con gorro y bufanda azul sobre fondo nevado.", image: "imagenes/5. Cojín navideño con muñeco de nieve tejido.png" },
+  { id: "6", name: "Reno de invierno", description: "Reno tejido con bufanda azul, astas decoradas y fondo nevado.", image: "imagenes/6. Imagen de ChatGPT 4 oct 2026, 22_20_19.png" },
+  { id: "7", name: "Árbol de Navidad", description: "Árbol navideño tejido, decorado con copos y esferas.", image: "imagenes/7. Imagen de ChatGPT 4 oct 2026, 22_20_49.png" },
+  { id: "8", name: "Santa Claus", description: "Santa tejido con gorro y bufanda azul entre copos de nieve.", image: "imagenes/8. Imagen de ChatGPT 4 oct 2026, 22_21_12.png" },
+  { id: "9", name: "Santa dorado", description: "Santa Claus con traje dorado, regalos y adornos navideños.", image: "imagenes/9. Imagen de ChatGPT 4 oct 2026, 22_26_49-1.png" },
+  { id: "10", name: "Reno dorado", description: "Reno con astas decoradas y detalles dorados de Navidad.", image: "imagenes/10. Imagen de ChatGPT 4 oct 2026, 22_26_52-4.png" },
+  { id: "11", name: "Muñeco de nieve dorado", description: "Muñeco de nieve con gorro y bufanda dorados.", image: "imagenes/11. Imagen de ChatGPT 4 oct 2026, 22_26_51-3.png" },
+  { id: "12", name: "Árbol dorado", description: "Árbol de Navidad decorado con esferas y regalos dorados.", image: "imagenes/12. Imagen de ChatGPT 4 oct 2026, 22_26_50-2.png" },
+  { id: "13", name: "Muñeco de nieve", description: "Muñeco sonriente con gorro tejido y bufanda dorada.", image: "imagenes/13. Imagen de ChatGPT 4 oct 2026, 22_42_03-4.png" },
+  { id: "14", name: "Santa con guantes", description: "Santa Claus con guantes rojos decorados con copos de nieve.", image: "imagenes/14. Imagen de ChatGPT 4 oct 2026, 22_42_02-3.png" },
+  { id: "15", name: "Santa con regalo", description: "Santa Claus sostiene un regalo verde con moño rojo.", image: "imagenes/15. Imagen de ChatGPT 4 oct 2026, 22_42_01-2.png" },
+  { id: "16", name: "Reno", description: "Reno sonriente con gorro navideño y bufanda roja.", image: "imagenes/16. Imagen de ChatGPT 4 oct 2026, 22_42_00-1.png" },
+  { id: "17", name: "Muñeco de nieve y reno", description: "Muñeco de nieve junto a un reno entre flores navideñas.", image: "imagenes/17. Imagen de ChatGPT 4 oct 2026, 22_52_57-1.png" },
+  { id: "18", name: "Reno y conejo", description: "Reno y conejo bordados juntos entre flores de Nochebuena.", image: "imagenes/18. Imagen de ChatGPT 4 oct 2026, 22_52_59-2.png" },
+  { id: "19", name: "Santa y árbol", description: "Santa Claus saluda junto a un árbol navideño decorado y regalos.", image: "imagenes/19. Imagen de ChatGPT 4 oct 2026, 22_52_59-3.png" },
+  { id: "20", name: "Reno y árbol", description: "Reno bordado junto a un árbol de Navidad decorado.", image: "imagenes/20. Imagen de ChatGPT 4 oct 2026, 22_53_00-4.png" },
+  { id: "21", name: "Bota navideña", description: "Bota azul decorada con bordados dorados, flores y regalos.", image: "imagenes/21. Imagen de ChatGPT 4 oct 2026, 23_05_22-3.png" },
+  { id: "22", name: "Muñeco de nieve floral", description: "Muñeco de nieve con sombrero azul, rodeado de flores y adornos.", image: "imagenes/22. Imagen de ChatGPT 4 oct 2026, 23_05_23-4.png" },
+  { id: "23", name: "Faroles con velas", description: "Faroles decorativos con velas encendidas entre flores navideñas.", image: "imagenes/23. Imagen de ChatGPT 4 oct 2026, 23_05_20-1.png" },
+  { id: "24", name: "Santa entre rosas", description: "Santa Claus de azul rodeado de rosas y flores invernales.", image: "imagenes/24. Imagen de ChatGPT 4 oct 2026, 23_05_21-2.png" }
 ];
 let products = [];
 
@@ -38,7 +55,7 @@ async function loadProducts() {
 /* Ilustraciones SVG reemplazables por fotografías usando product.image. */
 function cushionSvg(product) {
   if (product.image) {
-    return `<img class="product-art" src="${product.image}" alt="Cojín ${product.name}" loading="lazy">`;
+    return `<img class="product-art" src="${new URL(product.image, ASSET_BASE).href}" alt="Cojín ${product.name}" loading="lazy">`;
   }
   const motifs = {
     tree: `<path d="M100 48 73 83h16L67 105h24l-14 21h46l-14-21h24l-22-22h16z" fill="${product.ink}"/><rect x="95" y="125" width="10" height="15" rx="2" fill="#8b6545"/><circle cx="100" cy="69" r="4" fill="${product.accent}"/><circle cx="86" cy="101" r="4" fill="${product.accent}"/><circle cx="113" cy="111" r="4" fill="${product.accent}"/>`,
@@ -64,6 +81,7 @@ const backdrop = document.querySelector("#drawer-backdrop");
 const openButton = document.querySelector("#open-order");
 const closeButton = document.querySelector("#close-order");
 const inventoryList = document.querySelector("#inventory-list");
+const inventoryTotal = document.querySelector("#inventory-total");
 const adminStatus = document.querySelector("#admin-status");
 const storeStatus = document.querySelector("#store-status");
 let lastFocusedElement = null;
@@ -111,7 +129,7 @@ function renderProducts() {
         <button class="add-button" type="button" data-add="${product.id}" aria-label="Agregar ${product.name} al pedido" ${!product.disponible || product.stock <= (cart.get(product.id) || 0) ? "disabled" : ""}>${!product.disponible ? "Agotado" : product.stock <= (cart.get(product.id) || 0) ? "Máximo en el pedido" : "Agregar al pedido"}</button>
       </div>
     </article>`).join("") : `<p class="inventory-empty">No hay cojines disponibles en este momento.</p>`;
-  const heroProducts = ["muneco", "pino", "cuadros"].map((id) => products.find((product) => product.id === id) || products[0]).filter(Boolean);
+  const heroProducts = ["6", "1", "11"].map((id) => products.find((product) => product.id === id) || products[0]).filter(Boolean);
   document.querySelectorAll("#hero-art .hero-pillow").forEach((pillow, index) => {
     const product = heroProducts[index];
     pillow.hidden = !product;
@@ -120,6 +138,10 @@ function renderProducts() {
 }
 
 function renderInventory() {
+  const totalStock = products.reduce((total, product) => total + product.stock, 0);
+  if (inventoryTotal) {
+    inventoryTotal.textContent = `Total en inventario: ${totalStock} ${totalStock === 1 ? "cojín" : "cojines"}`;
+  }
   if (products.length === 0) {
     inventoryList.innerHTML = `<p class="inventory-empty">No quedan referencias en el catálogo.</p>`;
     return;
@@ -128,7 +150,10 @@ function renderInventory() {
     <div class="inventory-row">
       <div class="inventory-product">
         ${cushionSvg(product)}
-        <strong>${product.name}</strong>
+        <div class="inventory-product-details">
+          <strong>${product.name}</strong>
+          <span class="inventory-id">ID: ${product.id}</span>
+        </div>
       </div>
       <span class="inventory-quantity">${product.stock} ${product.stock === 1 ? "unidad" : "unidades"}</span>
       <span class="inventory-availability ${product.disponible ? "is-available" : "is-sold-out"}">${product.disponible ? "Disponible" : "Agotado"}</span>
@@ -138,7 +163,7 @@ function renderInventory() {
 function buildWhatsAppUrl() {
   const lines = products
     .filter((product) => cart.has(product.id))
-    .map((product) => `• ${cart.get(product.id)} x ${product.name}`);
+    .map((product) => `• ${cart.get(product.id)} x ${product.name} (ID: ${product.id})`);
   const message = [
     "Hola, quiero cotizar un pedido en Navidad en cojines:",
     ...lines,
