@@ -328,7 +328,8 @@ h1 {
 }
 .cart-feedback::after { position: absolute; right: 28px; bottom: -9px; width: 16px; height: 16px; border-right: 2px solid #d4e2d9; border-bottom: 2px solid #d4e2d9; background: #f6f8f4; content: ""; transform: rotate(45deg); }
 .cart-feedback.is-visible { visibility: visible; opacity: 1; transform: translate(0, 0) scale(1); }
-.cart-santa { position: relative; z-index: 1; grid-column: 1; grid-row: 1; width: 84px; height: 104px; overflow: visible; animation: santa-arrives .75s cubic-bezier(.2, .8, .25, 1.25) both; }
+.cart-santa { position: relative; z-index: 1; grid-column: 1; grid-row: 1; width: 84px; height: 104px; overflow: visible; }
+.cart-feedback.is-visible .cart-santa { animation: santa-arrives .75s cubic-bezier(.2, .8, .25, 1.25) both; }
 .santa-coat, .santa-belt { fill: #b33136; }
 .santa-trim, .santa-hat-pom { fill: #fff; }
 .santa-face, .santa-nose { fill: #f2bb91; }
@@ -337,14 +338,18 @@ h1 {
 .santa-beard, .santa-mustache { fill: #fff; }
 .santa-eye { fill: #3b302b; }
 .santa-buckle { fill: #e7bd5d; stroke: #fff3cf; stroke-width: 2; }
-.cart-speech { position: absolute; top: 12px; left: 72px; z-index: 2; padding: 6px 10px; border: 1px solid #dce8df; border-radius: 14px 14px 14px 4px; background: #fff; color: var(--wine); font: 700 .85rem/1 var(--serif); white-space: nowrap; animation: speech-pop .35s .36s both; }
+.cart-speech { position: absolute; top: 12px; left: 72px; z-index: 2; padding: 6px 10px; border: 1px solid #dce8df; border-radius: 14px 14px 14px 4px; background: #fff; color: var(--wine); font: 700 .85rem/1 var(--serif); white-space: nowrap; opacity: 0; transform: scale(.65) translateY(5px); }
+.cart-feedback.is-visible .cart-speech { animation: speech-pop .35s .36s both; }
 .cart-feedback-copy { display: grid; min-width: 0; gap: 5px; grid-column: 2; grid-row: 1; align-self: center; }
 .cart-feedback-copy strong { color: var(--green); font: 700 1.12rem/1.15 var(--serif); }
 .cart-feedback-copy span { overflow-wrap: anywhere; color: var(--muted); font-size: .84rem; line-height: 1.35; }
 .cart-feedback-sparkle, .cart-feedback-snow { position: absolute; color: var(--gold); pointer-events: none; }
-.cart-feedback-sparkle-one { top: 13px; left: 17px; font-size: 1rem; animation: twinkle .9s .2s ease-in-out infinite alternate; }
-.cart-feedback-sparkle-two { top: 60px; left: 5px; color: var(--wine); font-size: .9rem; animation: twinkle .8s .4s ease-in-out infinite alternate; }
-.cart-feedback-snow { top: 27px; right: 18px; color: #8db7aa; font-size: 1.3rem; animation: snow-spin 2.5s linear infinite; }
+.cart-feedback-sparkle-one { top: 13px; left: 17px; font-size: 1rem; }
+.cart-feedback-sparkle-two { top: 60px; left: 5px; color: var(--wine); font-size: .9rem; }
+.cart-feedback-snow { top: 27px; right: 18px; color: #8db7aa; font-size: 1.3rem; }
+.cart-feedback.is-visible .cart-feedback-sparkle-one { animation: twinkle .9s ease-in-out infinite alternate; }
+.cart-feedback.is-visible .cart-feedback-sparkle-two { animation: twinkle .8s .15s ease-in-out infinite alternate; }
+.cart-feedback.is-visible .cart-feedback-snow { animation: snow-spin 2.5s linear infinite; }
 @keyframes santa-arrives {
   0% { opacity: 0; transform: translate(-22px, 24px) rotate(-14deg) scale(.72); }
   62% { opacity: 1; transform: translate(4px, -4px) rotate(5deg) scale(1.08); }

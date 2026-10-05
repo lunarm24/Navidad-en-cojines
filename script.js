@@ -525,7 +525,8 @@ function showCartFeedback(productName) {
   cartFeedback.classList.remove("is-visible");
   cartFeedbackMessage.textContent = `${productName} ya está en tu pedido`;
   cartFeedback.setAttribute("aria-label", `¡Ho, ho, ho! ${productName} se agregó a tu pedido.`);
-  requestAnimationFrame(() => cartFeedback.classList.add("is-visible"));
+  void cartFeedback.offsetWidth;
+  cartFeedback.classList.add("is-visible");
   cartFeedbackTimer = window.setTimeout(() => cartFeedback.classList.remove("is-visible"), 3600);
 }
 
