@@ -2,6 +2,8 @@
 const PHONE = "573217096231";
 const INVENTORY_FILE = new URL("inventory.json", document.currentScript.src).href;
 const ASSET_BASE = new URL(".", document.currentScript.src);
+const API_BASE = new URL("api/", ASSET_BASE);
+const SALES_STORAGE_KEY = "navidad-en-cojines.sales.v1";
 const defaultProducts = [
   { id: "1", name: "Ciervo y conejo", description: "Bordado navideño de ciervo y conejo.", image: "imagenes/1. Cojín bordado de invierno con ciervo y conejo.png" },
   { id: "2", name: "Santa y árbol", description: "Bordado navideño de Santa junto al árbol.", image: "imagenes/2. Cojín navideño bordado con Santa y árbol.png" },
@@ -29,6 +31,7 @@ const defaultProducts = [
   { id: "24", name: "Santa entre rosas", description: "Santa Claus de azul rodeado de rosas y flores invernales.", image: "imagenes/24. Imagen de ChatGPT 4 oct 2026, 23_05_21-2.png" }
 ];
 let products = [];
+let serverBackedStorage = false;
 
 async function loadInventory() {
   const response = await fetch(`${INVENTORY_FILE}?v=${Date.now()}`, { cache: "no-store" });
@@ -40,16 +43,97 @@ async function loadInventory() {
   return inventory;
 }
 
-function productsFromInventory(inventory) {
-  return defaultProducts.map((product) => {
-    const value = inventory[product.id];
-    const stock = Number.isInteger(value) && value >= 0 ? value : 0;
-    return { ...product, stock, disponible: stock > 0 };
-  });
+async function loadState() {
+  const response = await fetch(new URL("state", API_BASE), { cache: "no-store" });
+  if (response.ok && response.headers.get("content-type")?.includes("application/json")) {
+    const state = await response.json();
+    if (!state.inventory || typeof state.inventory !== "object" || !Array.isArray(state.sales)) {
+      throw new Error("El servidor devolvió un estado de inventario o ventas no válido.");
+    }
+    serverBackedStorage = true;
+    if (state.sales.length === 0) {
+      const legacySales = loadSales();
+      if (legacySales.length > 0) {
+        try {
+          const importedState = await requestApi(new URL("sales/import", API_BASE), {
+            method: "POST",
+            body: JSON.stringify({ sales: legacySales })
+          });
+          localStorage.removeItem(SALES_STORAGE_KEY);
+          return importedState;
+        } catch (error) {
+          if (error.status !== 409) throw error;
+          const latestState = await fetch(new URL("state", API_BASE), { cache: "no-store" });
+          if (!latestState.ok) throw new Error(`No se pudo recargar el inventario (${latestState.status}).`);
+          return latestState.json();
+        }
+      }
+    }
+    return state;
+  }
+  if (response.status !== 404) {
+    throw new Error(`No se pudo cargar el estado del servidor (${response.status}).`);
+  }
+
+  serverBackedStorage = false;
+  return { inventory: await loadInventory(), sales: loadSales() };
 }
 
-async function loadProducts() {
-  return productsFromInventory(await loadInventory());
+function loadSales() {
+  const storedSales = localStorage.getItem(SALES_STORAGE_KEY);
+  if (storedSales === null) return [];
+
+  let sales;
+  try {
+    sales = JSON.parse(storedSales);
+  } catch (error) {
+    throw new Error(`El historial de ventas guardado no es válido: ${error.message}`);
+  }
+  if (!Array.isArray(sales)) throw new Error("El historial de ventas guardado no tiene un formato válido.");
+
+  for (const sale of sales) {
+    if (
+      !sale
+      || typeof sale !== "object"
+      || typeof sale.createdAt !== "string"
+      || !Number.isFinite(Date.parse(sale.createdAt))
+      || !Number.isInteger(sale.total)
+      || sale.total < 0
+      || (sale.paymentMethod !== undefined && !["cash", "digital"].includes(sale.paymentMethod))
+      || !Array.isArray(sale.items)
+      || sale.items.length === 0
+      || sale.items.some((item) => (
+        !item
+        || !defaultProducts.some((product) => product.id === item.id)
+        || !Number.isInteger(item.quantity)
+        || item.quantity < 1
+      ))
+    ) {
+      throw new Error("El historial de ventas guardado contiene una venta inválida.");
+    }
+  }
+  return sales;
+}
+
+function saveLegacySales(sales) {
+  localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales));
+}
+
+function productsFromInventory(inventory, sales = [], salesAlreadyApplied = false) {
+  const soldQuantities = new Map();
+  if (!salesAlreadyApplied) {
+    for (const sale of sales) {
+      for (const item of sale.items) {
+        soldQuantities.set(item.id, (soldQuantities.get(item.id) || 0) + item.quantity);
+      }
+    }
+  }
+  return defaultProducts.map((product) => {
+    const value = inventory[product.id];
+    const startingStock = Number.isInteger(value) && value >= 0 ? value : 0;
+    const stock = Math.max(0, startingStock - (soldQuantities.get(product.id) || 0));
+    return { ...product, stock, disponible: stock > 0 };
+  });
 }
 
 /* Ilustraciones SVG reemplazables por fotografías usando product.image. */
@@ -84,15 +168,34 @@ const inventoryList = document.querySelector("#inventory-list");
 const inventoryTotal = document.querySelector("#inventory-total");
 const adminStatus = document.querySelector("#admin-status");
 const storeStatus = document.querySelector("#store-status");
+const saleProductSelect = document.querySelector("#sale-product");
+const saleQuantityInput = document.querySelector("#sale-quantity");
+const saleDraftList = document.querySelector("#sale-draft");
+const saleEstimate = document.querySelector("#sale-estimate");
+const salePromotion = document.querySelector("#sale-promotion");
+const registerSaleButton = document.querySelector("#register-sale");
+const saleStatus = document.querySelector("#sale-status");
+const salesHistory = document.querySelector("#sales-history");
+const cartFeedback = document.querySelector("#cart-feedback");
+const cartFeedbackMessage = document.querySelector("#cart-feedback-message");
+const salesChannel = typeof BroadcastChannel === "undefined"
+  ? null
+  : new BroadcastChannel("navidad-en-cojines-sales");
 let lastFocusedElement = null;
 let drawerTimer;
+let sales = [];
+let inventorySource = null;
+const saleDraft = new Map();
+let cartFeedbackTimer;
 
 function formatPrice(value) {
   return `$${money.format(value)}`;
 }
 
-function updateVisibleInventory(inventory) {
-  products = productsFromInventory(inventory);
+function updateVisibleInventory(inventory, savedSales = null) {
+  inventorySource = inventory;
+  sales = savedSales || loadSales();
+  products = productsFromInventory(inventory, sales, serverBackedStorage);
   for (const [id, quantity] of cart) {
     const product = products.find((item) => item.id === id);
     if (!product || product.stock === 0) cart.delete(id);
@@ -101,6 +204,8 @@ function updateVisibleInventory(inventory) {
   if (productGrid) renderProducts();
   if (cartList) renderCart();
   if (inventoryList) renderInventory();
+  if (saleProductSelect) renderSaleForm();
+  if (salesHistory) renderSales();
 }
 
 function setAdminStatus(message, isError = false) {
@@ -113,6 +218,16 @@ function totalPrice(quantity) {
   const bundles = Math.floor(quantity / 4);
   const remainder = quantity % 4;
   return bundles * 130000 + priceScale[remainder];
+}
+
+function promotionDescription(quantity) {
+  if (quantity === 0) return "Agrega productos para calcular la promoción.";
+  const bundles = Math.floor(quantity / 4);
+  const remainder = quantity % 4;
+  const parts = [];
+  if (bundles > 0) parts.push(`${bundles} promoción${bundles === 1 ? "" : "es"} de 4`);
+  if (remainder > 0) parts.push(`${remainder} ${remainder === 1 ? "unidad" : "unidades"} adicionales`);
+  return `Promoción aplicada: ${parts.join(" + ")}.`;
 }
 
 function cartQuantity() {
@@ -158,6 +273,198 @@ function renderInventory() {
       <span class="inventory-quantity">${product.stock} ${product.stock === 1 ? "unidad" : "unidades"}</span>
       <span class="inventory-availability ${product.disponible ? "is-available" : "is-sold-out"}">${product.disponible ? "Disponible" : "Agotado"}</span>
     </div>`).join("");
+}
+
+function renderSales() {
+  const unitsSold = sales.reduce((sum, sale) => (
+    sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0)
+  ), 0);
+  const revenue = sales.reduce((sum, sale) => sum + sale.total, 0);
+  const cashRevenue = sales.reduce((sum, sale) => sum + (sale.paymentMethod === "cash" ? sale.total : 0), 0);
+  const digitalRevenue = sales.reduce((sum, sale) => sum + (sale.paymentMethod === "digital" ? sale.total : 0), 0);
+  document.querySelector("#units-sold").textContent = unitsSold;
+  document.querySelector("#sales-count").textContent = sales.length;
+  document.querySelector("#sales-revenue").textContent = formatPrice(revenue);
+  document.querySelector("#cash-revenue").textContent = formatPrice(cashRevenue);
+  document.querySelector("#digital-revenue").textContent = formatPrice(digitalRevenue);
+
+  const orderedSales = sales.map((sale, index) => ({ sale, index })).reverse();
+  salesHistory.innerHTML = orderedSales.length ? orderedSales.map(({ sale, index }) => {
+    const date = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" })
+      .format(new Date(sale.createdAt));
+    const itemSummary = sale.items.map((item) => {
+      const product = defaultProducts.find((candidate) => candidate.id === item.id);
+      return `${item.quantity} × ${product.name} (ID: ${product.id})`;
+    }).join(", ");
+    const saleUnits = sale.items.reduce((sum, item) => sum + item.quantity, 0);
+    const paymentMethod = sale.paymentMethod === "cash"
+      ? "Efectivo"
+      : sale.paymentMethod === "digital" ? "Digital" : "No especificado";
+    return `
+      <article class="sales-history-row">
+        <div><strong>${date} · ${paymentMethod}</strong><span>${itemSummary}</span></div>
+        <span>${saleUnits} ${saleUnits === 1 ? "cojín" : "cojines"}</span>
+        <strong>${formatPrice(sale.total)}</strong>
+        <button class="sale-remove-button" type="button" data-delete-sale="${serverBackedStorage ? sale.id : index}">Eliminar venta</button>
+      </article>`;
+  }).join("") : `<p class="inventory-empty">Todavía no hay ventas registradas.</p>`;
+}
+
+function renderSaleForm() {
+  const selectedId = saleProductSelect.value;
+  saleProductSelect.innerHTML = products.map((product) => `
+    <option value="${product.id}" ${product.stock === 0 ? "disabled" : ""}>
+      ID ${product.id} · ${product.name}${product.stock === 0 ? " · Agotado" : ` · ${product.stock} disponibles`}
+    </option>`).join("");
+  if (products.some((product) => product.id === selectedId && product.stock > 0)) {
+    saleProductSelect.value = selectedId;
+  }
+  saleQuantityInput.max = products.find((product) => product.id === saleProductSelect.value)?.stock || 1;
+  renderSaleDraft();
+}
+
+function renderSaleDraft() {
+  const draftItems = [...saleDraft.entries()];
+  const quantity = draftItems.reduce((sum, [, itemQuantity]) => sum + itemQuantity, 0);
+  saleDraftList.innerHTML = draftItems.length ? draftItems.map(([id, itemQuantity]) => {
+    const product = defaultProducts.find((candidate) => candidate.id === id);
+    return `
+      <div class="sale-draft-row">
+        <span><strong>ID ${product.id} · ${product.name}</strong><small>${itemQuantity} ${itemQuantity === 1 ? "unidad" : "unidades"}</small></span>
+        <button class="sale-remove-button" type="button" data-remove-sale-item="${id}" aria-label="Quitar ${product.name} de la venta">Quitar</button>
+      </div>`;
+  }).join("") : `<p class="inventory-empty">Agrega una o más referencias para preparar la venta.</p>`;
+  salePromotion.textContent = promotionDescription(quantity);
+  saleEstimate.textContent = formatPrice(totalPrice(quantity));
+  registerSaleButton.disabled = draftItems.length === 0;
+}
+
+function setSaleStatus(message, isError = false) {
+  saleStatus.textContent = message;
+  saleStatus.dataset.error = String(isError);
+}
+
+function addSaleItem() {
+  const product = products.find((item) => item.id === saleProductSelect.value);
+  const quantity = Number(saleQuantityInput.value);
+  if (!product || !Number.isInteger(quantity) || quantity < 1) {
+    setSaleStatus("Selecciona una referencia y una cantidad válida.", true);
+    return;
+  }
+  const draftQuantity = saleDraft.get(product.id) || 0;
+  if (draftQuantity + quantity > product.stock) {
+    setSaleStatus(`Solo hay ${product.stock - draftQuantity} unidades disponibles de la referencia ${product.id}.`, true);
+    return;
+  }
+  saleDraft.set(product.id, draftQuantity + quantity);
+  saleQuantityInput.value = "1";
+  setSaleStatus(`${product.name} se agregó a la venta.`);
+  renderSaleDraft();
+}
+
+async function requestApi(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: { "Content-Type": "application/json", ...options.headers }
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    const error = new Error(result.error || `Error del servidor (${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
+  return result;
+}
+
+function announceSalesChange() {
+  salesChannel?.postMessage("sales-updated");
+}
+
+async function refreshServerState() {
+  const state = await loadState();
+  updateVisibleInventory(state.inventory, state.sales);
+}
+
+async function registerSale() {
+  const items = [...saleDraft.entries()].map(([id, quantity]) => ({ id, quantity }));
+  if (!items.length || !inventorySource) {
+    setSaleStatus("No hay productos en la venta o el inventario no está disponible.", true);
+    return;
+  }
+  registerSaleButton.disabled = true;
+  for (const item of items) {
+    const product = products.find((candidate) => candidate.id === item.id);
+    if (!product || item.quantity > product.stock) {
+      setSaleStatus(`No hay existencias suficientes para la referencia ${item.id}. Actualiza el inventario antes de continuar.`, true);
+      renderSaleDraft();
+      return;
+    }
+  }
+
+  const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  const paymentMethod = document.querySelector("#sale-payment-method").value;
+  if (!["cash", "digital"].includes(paymentMethod)) {
+    setSaleStatus("Selecciona un método de pago válido.", true);
+    renderSaleDraft();
+    return;
+  }
+  try {
+    if (serverBackedStorage) {
+      const state = await requestApi(new URL("sales", API_BASE), {
+        method: "POST",
+        body: JSON.stringify({ items, paymentMethod })
+      });
+      updateVisibleInventory(state.inventory, state.sales);
+      announceSalesChange();
+    } else {
+      const nextSales = [...sales, {
+        createdAt: new Date().toISOString(),
+        items,
+        total: totalPrice(quantity),
+        paymentMethod
+      }];
+      saveLegacySales(nextSales);
+      updateVisibleInventory(inventorySource, nextSales);
+    }
+  } catch (error) {
+    setSaleStatus(`No se pudo guardar la venta: ${error.message}`, true);
+    renderSaleDraft();
+    return;
+  }
+
+  saleDraft.clear();
+  renderSaleDraft();
+  setSaleStatus(`Venta registrada: ${quantity} ${quantity === 1 ? "cojín" : "cojines"} por ${formatPrice(totalPrice(quantity))}.`);
+  setAdminStatus(serverBackedStorage
+    ? "Venta e inventario guardados automáticamente en sales.json e inventory.json."
+    : "El servidor JSON no está activo; la venta solo se guardó en este navegador.");
+}
+
+async function deleteSale(saleKey) {
+  if (!window.confirm("¿Eliminar esta venta y devolver sus unidades al inventario?")) return;
+  try {
+    if (serverBackedStorage) {
+      const state = await requestApi(new URL(`sales/${encodeURIComponent(saleKey)}`, API_BASE), {
+        method: "DELETE"
+      });
+      updateVisibleInventory(state.inventory, state.sales);
+      announceSalesChange();
+    } else {
+      const saleIndex = Number(saleKey);
+      if (!Number.isInteger(saleIndex) || !sales[saleIndex]) {
+        throw new Error("No se encontró esa venta en el historial local.");
+      }
+      const nextSales = sales.filter((_, index) => index !== saleIndex);
+      saveLegacySales(nextSales);
+      updateVisibleInventory(inventorySource, nextSales);
+    }
+    setSaleStatus("Venta eliminada y existencias devueltas al inventario.");
+    setAdminStatus(serverBackedStorage
+      ? "Venta eliminada; inventory.json y sales.json se actualizaron."
+      : "Venta eliminada del historial de este navegador.");
+  } catch (error) {
+    setSaleStatus(`No se pudo eliminar la venta: ${error.message}`, true);
+  }
 }
 
 function buildWhatsAppUrl() {
@@ -208,7 +515,18 @@ function addProduct(id) {
   cart.set(id, (cart.get(id) || 0) + 1);
   renderCart();
   renderProducts();
+  showCartFeedback(product.name);
   return true;
+}
+
+function showCartFeedback(productName) {
+  if (!cartFeedback || !cartFeedbackMessage) return;
+  window.clearTimeout(cartFeedbackTimer);
+  cartFeedback.classList.remove("is-visible");
+  cartFeedbackMessage.textContent = `${productName} ya está en tu pedido`;
+  cartFeedback.setAttribute("aria-label", `¡Ho, ho, ho! ${productName} se agregó a tu pedido.`);
+  requestAnimationFrame(() => cartFeedback.classList.add("is-visible"));
+  cartFeedbackTimer = window.setTimeout(() => cartFeedback.classList.remove("is-visible"), 3600);
 }
 
 function openDrawer() {
@@ -237,14 +555,59 @@ function closeDrawer() {
   drawerTimer = window.setTimeout(() => { backdrop.hidden = true; }, 280);
 }
 
+function subscribeToSalesChanges(onRefreshError) {
+  if (salesChannel) {
+    salesChannel.addEventListener("message", async () => {
+      try {
+        await refreshServerState();
+      } catch (error) {
+        onRefreshError(error);
+      }
+    });
+  }
+  window.addEventListener("storage", async (event) => {
+    if (event.key !== SALES_STORAGE_KEY && event.key !== null) return;
+    try {
+      const state = await loadState();
+      updateVisibleInventory(state.inventory, state.sales);
+    } catch (error) {
+      onRefreshError(error);
+    }
+  });
+}
+
 async function initializeAdmin() {
+  document.querySelector("#add-sale-item").addEventListener("click", addSaleItem);
+  registerSaleButton.addEventListener("click", registerSale);
+  saleProductSelect.addEventListener("change", () => {
+    saleQuantityInput.max = products.find((product) => product.id === saleProductSelect.value)?.stock || 1;
+  });
+  saleDraftList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-remove-sale-item]");
+    if (!button) return;
+    saleDraft.delete(button.dataset.removeSaleItem);
+    renderSaleDraft();
+  });
+  salesHistory.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-delete-sale]");
+    if (button) void deleteSale(button.dataset.deleteSale);
+  });
+  subscribeToSalesChanges((error) => {
+    setAdminStatus(`No se pudo actualizar el historial: ${error.message}`, true);
+  });
+
   try {
-    products = await loadProducts();
-    setAdminStatus("Existencias cargadas desde inventory.json.");
+    const state = await loadState();
+    updateVisibleInventory(state.inventory, state.sales);
+    setAdminStatus(serverBackedStorage
+      ? "Inventario y ventas conectados a los archivos JSON locales."
+      : "Servidor local no detectado. Las ventas solo se guardan en este navegador.");
   } catch (error) {
+    products = [];
+    renderInventory();
+    renderSales();
     setAdminStatus(error.message, true);
   }
-  renderInventory();
 }
 
 async function initializeStorefront() {
@@ -293,13 +656,18 @@ async function initializeStorefront() {
 
   initializeSnow();
   try {
-    updateVisibleInventory(await loadInventory());
+    const state = await loadState();
+    updateVisibleInventory(state.inventory, state.sales);
   } catch (error) {
     products = [];
     renderProducts();
     renderCart();
     if (storeStatus) storeStatus.textContent = `${error.message} Vuelve a cargar la página para intentarlo de nuevo.`;
   }
+
+  subscribeToSalesChanges((error) => {
+    if (storeStatus) storeStatus.textContent = `No se pudieron actualizar las existencias: ${error.message}`;
+  });
 }
 
 function initializeSnow() {

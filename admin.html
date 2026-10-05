@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=green-card-borders-2">
-  <script src="script.js?v=images-match-product-ids-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=sales-payment-method-2">
+  <script src="script.js?v=sales-payment-method-2" defer></script>
 </head>
 <body data-page="admin">
   <div class="site-shell">
@@ -36,7 +36,42 @@
       <div class="admin-edit-area">
         <a class="admin-edit" href="https://github.com/lunarm24/Navidad-en-cojines/edit/main/inventory.json" target="_blank" rel="noopener noreferrer">Editar inventario en GitHub</a>
         <p id="admin-status" role="status" aria-live="polite"></p>
+        <p class="admin-storage-note">Ejecuta la tarea <strong>Run local store</strong> para guardar ventas y existencias automáticamente en los JSON de este proyecto. Esa información local no se publica por sí sola en GitHub Pages.</p>
       </div>
+      <section class="sales-panel" aria-labelledby="sales-title">
+        <h2 id="sales-title">Registrar venta</h2>
+        <p class="sales-help">Agrega las referencias vendidas. El total aplica las promociones del catálogo a toda la venta.</p>
+        <div class="sale-entry">
+          <label for="sale-product">Referencia</label>
+          <select id="sale-product"></select>
+          <label for="sale-quantity">Unidades</label>
+          <input id="sale-quantity" type="number" min="1" step="1" value="1">
+          <button class="admin-edit sale-add-button" id="add-sale-item" type="button">Agregar referencia</button>
+        </div>
+        <label class="payment-method-label" for="sale-payment-method">Método de pago de esta venta</label>
+        <select id="sale-payment-method" class="payment-method-select">
+          <option value="cash">Efectivo</option>
+          <option value="digital">Digital (transferencia, Nequi, Daviplata, etc.)</option>
+        </select>
+        <div id="sale-draft" class="sale-draft"></div>
+        <div class="sale-total">
+          <p id="sale-promotion">Agrega productos para calcular la promoción.</p>
+          <p>Total de la venta <strong id="sale-estimate">$0</strong></p>
+        </div>
+        <button class="admin-edit" id="register-sale" type="button" disabled>Registrar venta y descontar inventario</button>
+        <p id="sale-status" role="status" aria-live="polite"></p>
+      </section>
+      <section class="sales-summary" aria-label="Resumen de ventas">
+        <p><span>Unidades vendidas</span><strong id="units-sold">0</strong></p>
+        <p><span>Ventas registradas</span><strong id="sales-count">0</strong></p>
+        <p><span>Total vendido</span><strong id="sales-revenue">$0</strong></p>
+        <p><span>Recibido en efectivo</span><strong id="cash-revenue">$0</strong></p>
+        <p><span>Recibido digital</span><strong id="digital-revenue">$0</strong></p>
+      </section>
+      <section class="sales-history-panel" aria-labelledby="sales-history-title">
+        <h2 id="sales-history-title">Historial de ventas</h2>
+        <div id="sales-history" class="sales-history"></div>
+      </section>
       <section class="admin-panel" aria-label="Existencias por referencia">
         <p class="inventory-total" id="inventory-total" aria-live="polite"></p>
         <div class="inventory-list" id="inventory-list"></div>

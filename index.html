@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=green-card-borders-2">
-  <script src="script.js?v=images-match-product-ids-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=santa-cart-pop-1">
+  <script src="script.js?v=santa-cart-pop-1" defer></script>
 </head>
 <body data-page="store">
   <canvas class="snow-canvas" id="snow" aria-hidden="true"></canvas>
@@ -65,6 +65,28 @@
   </div>
 
   <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <div class="cart-feedback" id="cart-feedback" role="status" aria-live="polite" aria-atomic="true">
+    <span class="cart-feedback-sparkle cart-feedback-sparkle-one" aria-hidden="true">✦</span>
+    <span class="cart-feedback-sparkle cart-feedback-sparkle-two" aria-hidden="true">✧</span>
+    <svg class="cart-santa" viewBox="0 0 120 144" role="img" aria-label="Santa Claus">
+      <path class="santa-coat" d="M20 137c2-31 12-47 40-47s38 16 40 47H20Z"/>
+      <path class="santa-trim" d="M20 127h80v11H20z"/>
+      <path class="santa-face" d="M34 54c0-23 11-37 26-37s26 14 26 37v16c0 18-12 29-26 29S34 88 34 70V54Z"/>
+      <path class="santa-hat" d="M31 45c2-21 15-36 32-36 15 0 25 12 27 32-17-8-37-7-59 4Z"/>
+      <path class="santa-hat-trim" d="M29 43c16-9 39-12 64-4l-2 12c-23-7-43-5-60 5z"/>
+      <circle class="santa-hat-pom" cx="96" cy="20" r="10"/>
+      <path class="santa-beard" d="M36 62c6 7 13 8 23 3 10 5 19 4 26-3l2 15c-2 17-12 26-28 26S37 93 34 78z"/>
+      <ellipse class="santa-mustache" cx="60" cy="68" rx="18" ry="8"/>
+      <circle class="santa-eye" cx="49" cy="56" r="2.5"/>
+      <circle class="santa-eye" cx="70" cy="56" r="2.5"/>
+      <circle class="santa-nose" cx="60" cy="65" r="4"/>
+      <path class="santa-belt" d="M22 112h76v8H22z"/>
+      <rect class="santa-buckle" x="54" y="109" width="13" height="14" rx="2"/>
+    </svg>
+    <span class="cart-speech" aria-hidden="true">¡Ho, ho, ho!</span>
+    <span class="cart-feedback-copy"><strong>¡Al carrito!</strong><span id="cart-feedback-message"></span></span>
+    <span class="cart-feedback-snow" aria-hidden="true">❄</span>
+  </div>
   <aside class="order-drawer" id="order-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" aria-hidden="true" inert>
     <div class="drawer-heading">
       <h2 id="drawer-title">Mi pedido</h2>

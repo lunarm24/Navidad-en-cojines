@@ -2,16 +2,29 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Run static site",
+			"label": "Run local store",
 			"type": "shell",
 			"command": "py",
 			"args": [
-				"-m",
-				"http.server",
-				"8000"
+				"server.py",
+				"8001"
 			],
 			"isBackground": true,
-			"problemMatcher": []
+			"problemMatcher": {
+				"owner": "local-store",
+				"pattern": {
+					"regexp": "^$"
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "^ *Executing task:",
+					"endsPattern": "^Tienda disponible en http://localhost:8001"
+				}
+			},
+			"runOptions": {
+				"runOn": "folderOpen",
+				"instanceLimit": 1
+			}
 		}
 	]
 }
