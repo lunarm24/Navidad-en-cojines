@@ -156,7 +156,7 @@ function cushionSvg(product) {
 
 /* Carrito */
 const cart = new Map();
-const priceScale = [0, 40000, 70000, 100000];
+const UNIT_PRICE = 35000;
 const money = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 });
 const productGrid = document.querySelector("#product-grid");
 const cartList = document.querySelector("#cart-list");
@@ -215,19 +215,12 @@ function setAdminStatus(message, isError = false) {
 }
 
 function totalPrice(quantity) {
-  const bundles = Math.floor(quantity / 4);
-  const remainder = quantity % 4;
-  return bundles * 130000 + priceScale[remainder];
+  return quantity * UNIT_PRICE;
 }
 
 function promotionDescription(quantity) {
-  if (quantity === 0) return "Agrega productos para calcular la promoción.";
-  const bundles = Math.floor(quantity / 4);
-  const remainder = quantity % 4;
-  const parts = [];
-  if (bundles > 0) parts.push(`${bundles} promoción${bundles === 1 ? "" : "es"} de 4`);
-  if (remainder > 0) parts.push(`${remainder} ${remainder === 1 ? "unidad" : "unidades"} adicionales`);
-  return `Promoción aplicada: ${parts.join(" + ")}.`;
+  if (quantity === 0) return "Agrega productos para calcular el precio.";
+  return `Precio unitario: ${formatPrice(UNIT_PRICE)}.`;
 }
 
 function cartQuantity() {

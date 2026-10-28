@@ -14,7 +14,7 @@ La tienda está en `https://lunarm24.github.io/Navidad-en-cojines/` y la consult
 
 ## Registrar y eliminar ventas en el computador
 
-Al abrir esta carpeta en VS Code, la tarea **Run local store** inicia automáticamente el servidor local. Luego abre `http://localhost:8001`. Si VS Code pregunta si permites tareas automáticas, acéptalo y marca esta carpeta como confiable. También puedes iniciar el servidor manualmente con `py server.py 8001`. En el panel de administración, agrega una o varias referencias y sus cantidades, selecciona si el pago fue en efectivo o digital, revisa el total con las promociones del catálogo y pulsa **Registrar venta y descontar inventario**. Cada operación actualiza `inventory.json` y guarda en `sales.json` tanto el método de pago como el historial.
+Al abrir esta carpeta en VS Code, la tarea **Run local store** inicia automáticamente el servidor local. Luego abre `http://localhost:8001`. Si VS Code pregunta si permites tareas automáticas, acéptalo y marca esta carpeta como confiable. También puedes iniciar el servidor manualmente con `py server.py 8001`. En el panel de administración, agrega una o varias referencias y sus cantidades, selecciona si el pago fue en efectivo o digital, revisa el total (cada cojín tiene un precio fijo de $35.000) y pulsa **Registrar venta y descontar inventario**. Cada operación actualiza `inventory.json` y guarda en `sales.json` tanto el método de pago como el historial.
 
 El resumen de ventas muestra también cuánto se recibió en efectivo y cuánto por medios digitales; cada registro del historial indica su método de pago.
 

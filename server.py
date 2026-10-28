@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent
 INVENTORY_PATH = ROOT / "inventory.json"
 SALES_PATH = ROOT / "sales.json"
 PRODUCT_IDS = {str(product_id) for product_id in range(1, 25)}
-PRICE_BY_REMAINDER = (0, 40000, 70000, 100000)
+UNIT_PRICE = 35000
 STATE_LOCK = threading.RLock()
 MAX_REQUEST_BYTES = 1024 * 1024
 
@@ -112,8 +112,7 @@ def write_json_files(inventory, sales):
 
 
 def sale_price(quantity):
-    bundles, remainder = divmod(quantity, 4)
-    return bundles * 130000 + PRICE_BY_REMAINDER[remainder]
+    return quantity * UNIT_PRICE
 
 
 def clean_sale_items(value):
