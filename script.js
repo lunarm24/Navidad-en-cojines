@@ -242,7 +242,10 @@ function cartQuantity() {
 function renderProducts() {
   productGrid.innerHTML = products.length ? products.map((product) => `
     <article class="product-card" data-disponible="${product.disponible}">
-      ${cushionSvg(product)}
+      <div class="product-media">
+        ${cushionSvg(product)}
+        ${!product.disponible ? '<span class="sold-out-cross" aria-hidden="true"></span><span class="sold-out-label">Agotado</span>' : ""}
+      </div>
       <div class="product-info">
         <h3>${product.name}</h3>
         <p class="product-description">${product.description}</p>
