@@ -68,6 +68,13 @@ def read_sales():
                     or sale["paymentMethod"] not in {"cash", "digital"}
                 )
             )
+            or (
+                sale.get("customerName") is not None
+                and (
+                    not isinstance(sale["customerName"], str)
+                    or len(sale["customerName"]) > 80
+                )
+            )
             or not isinstance(sale.get("items"), list)
             or not sale["items"]
         ):
@@ -113,6 +120,17 @@ def write_json_files(inventory, sales):
 
 def sale_price(quantity):
     return quantity * UNIT_PRICE
+
+
+def clean_customer_name(value):
+    if not isinstance(value, str):
+        raise RequestError(400, "Escribe el nombre de quien compra.")
+    customer_name = value.strip()
+    if not customer_name:
+        raise RequestError(400, "Escribe el nombre de quien compra.")
+    if len(customer_name) > 80:
+        raise RequestError(400, "El nombre debe tener máximo 80 caracteres.")
+    return customer_name
 
 
 def clean_sale_items(value):
@@ -212,6 +230,12 @@ class StoreHandler(SimpleHTTPRequestHandler):
                             "items": items,
                             "total": legacy_sale["total"],
                             **(
+                                {"customerName": legacy_sale["customerName"].strip()}
+                                if isinstance(legacy_sale.get("customerName"), str)
+                                and legacy_sale["customerName"].strip()
+                                else {}
+                            ),
+                            **(
                                 {"paymentMethod": legacy_sale["paymentMethod"]}
                                 if isinstance(legacy_sale.get("paymentMethod"), str)
                                 and legacy_sale["paymentMethod"] in {"cash", "digital"}
@@ -234,6 +258,7 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 payment_method = body.get("paymentMethod") if isinstance(body, dict) else None
                 if not isinstance(payment_method, str) or payment_method not in {"cash", "digital"}:
                     raise RequestError(400, "Selecciona efectivo o pago digital.")
+                customer_name = clean_customer_name(body.get("customerName") if isinstance(body, dict) else None)
                 for item in items:
                     product_id = item["id"]
                     if inventory[product_id] < item["quantity"]:
@@ -251,9 +276,48 @@ class StoreHandler(SimpleHTTPRequestHandler):
                     "items": items,
                     "total": sale_price(quantity),
                     "paymentMethod": payment_method,
+                    "customerName": customer_name,
                 })
                 write_json_files(inventory, sales)
                 self.send_json(201, {"inventory": inventory, "sales": sales})
+        except (ValueError, RequestError) as error:
+            self.send_error_json(error if isinstance(error, RequestError) else RequestError(400, str(error)))
+
+    def do_PATCH(self):
+        path = unquote(urlsplit(self.path).path).rstrip("/")
+        prefix = "/api/sales/"
+        if not path.startswith(prefix):
+            self.send_json(404, {"error": "Ruta no encontrada."})
+            return
+        sale_id = path[len(prefix):]
+        if not sale_id or "/" in sale_id:
+            self.send_json(400, {"error": "El identificador de venta no es válido."})
+            return
+
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+            if content_length < 1 or content_length > MAX_REQUEST_BYTES:
+                raise RequestError(400, "El cuerpo de la solicitud está vacío o es demasiado grande.")
+            try:
+                body = json.loads(self.rfile.read(content_length))
+            except (json.JSONDecodeError, UnicodeDecodeError) as error:
+                raise RequestError(400, "La solicitud debe contener JSON válido.") from error
+
+            payment_method = body.get("paymentMethod") if isinstance(body, dict) else None
+            if payment_method not in {"cash", "digital"}:
+                raise RequestError(400, "Selecciona efectivo o pago digital.")
+            customer_name = clean_customer_name(body.get("customerName") if isinstance(body, dict) else None)
+
+            with STATE_LOCK:
+                inventory = read_inventory()
+                sales = read_sales()
+                sale = next((item for item in sales if item.get("id") == sale_id), None)
+                if sale is None:
+                    raise RequestError(404, "No se encontró esa venta.")
+                sale["paymentMethod"] = payment_method
+                sale["customerName"] = customer_name
+                write_json_files(inventory, sales)
+                self.send_json(200, {"inventory": inventory, "sales": sales})
         except (ValueError, RequestError) as error:
             self.send_error_json(error if isinstance(error, RequestError) else RequestError(400, str(error)))
 

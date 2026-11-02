@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=sales-payment-method-2">
-  <script src="script.js?v=sales-payment-method-2" defer></script>
+  <link rel="stylesheet" href="styles.css?v=sales-payment-method-6">
+  <script src="script.js?v=sales-payment-method-6" defer></script>
 </head>
 <body data-page="admin">
   <div class="site-shell">
@@ -53,6 +53,8 @@
           <option value="cash">Efectivo</option>
           <option value="digital">Digital (transferencia, Nequi, Daviplata, etc.)</option>
         </select>
+        <label class="payment-method-label" for="sale-customer-name">Nombre de quien compra</label>
+        <input id="sale-customer-name" class="payment-method-select" type="text" maxlength="80" autocomplete="name" placeholder="Nombre del cliente">
         <div id="sale-draft" class="sale-draft"></div>
         <div class="sale-total">
           <p id="sale-promotion">Agrega productos para calcular el precio.</p>
@@ -72,6 +74,22 @@
         <h2 id="sales-history-title">Historial de ventas</h2>
         <div id="sales-history" class="sales-history"></div>
       </section>
+      <dialog id="edit-payment-dialog" class="edit-payment-dialog">
+        <form id="edit-payment-form">
+          <h2>Editar venta</h2>
+          <label for="edit-sale-name">Nombre de quien compra</label>
+          <input id="edit-sale-name" class="payment-method-select" type="text" maxlength="80" autocomplete="name" placeholder="Nombre del cliente">
+          <label for="edit-payment-method">Método de pago</label>
+          <select id="edit-payment-method" class="payment-method-select">
+            <option value="cash">Efectivo</option>
+            <option value="digital">Digital</option>
+          </select>
+          <div class="edit-payment-actions">
+            <button id="cancel-payment-edit" class="sale-remove-button" type="button">Cancelar</button>
+            <button class="admin-edit" type="submit">Guardar cambios</button>
+          </div>
+        </form>
+      </dialog>
       <section class="admin-panel" aria-label="Existencias por referencia">
         <p class="inventory-total" id="inventory-total" aria-live="polite"></p>
         <div class="inventory-list" id="inventory-list"></div>

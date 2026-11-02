@@ -415,6 +415,20 @@ h1 {
 
 .sale-remove-button { padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--wine); cursor: pointer; }
 
+.sale-edit-button { padding: 6px 10px; border: 1px solid var(--green); border-radius: 999px; background: #fff; color: var(--green); cursor: pointer; white-space: nowrap; }
+
+.edit-payment-dialog { width: min(420px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--line); border-radius: 14px; color: var(--text); }
+
+.edit-payment-dialog::backdrop { background: rgba(24, 38, 27, .45); }
+
+.edit-payment-dialog form { display: grid; gap: 12px; padding: 22px; }
+
+.edit-payment-dialog h2 { margin: 0; color: var(--green); font: 700 1.25rem/1.2 var(--serif); }
+
+.edit-payment-dialog label { color: var(--muted); font-size: .84rem; font-weight: 700; }
+
+.edit-payment-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
 .sale-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 16px 0 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 
 .sale-total p { margin: 0; color: var(--muted); font-size: .9rem; }
@@ -439,7 +453,7 @@ h1 {
 
 .sales-history { display: grid; }
 
-.sales-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+.sales-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto auto; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); font-size: .88rem; }
 
 .sales-history-row > div { display: grid; gap: 4px; }
 
@@ -841,6 +855,7 @@ h1 {
 
   .sales-history-row > strong { grid-column: 2; grid-row: 2; text-align: right; }
 
+  .sales-history-row .sale-edit-button { grid-column: 1 / -1; justify-self: start; }
   .sales-history-row .sale-remove-button { grid-column: 1 / -1; justify-self: start; }
 
   .cart-feedback { right: 14px; bottom: 18px; grid-template-columns: 76px minmax(0, 1fr); min-height: 112px; padding-right: 16px; }
