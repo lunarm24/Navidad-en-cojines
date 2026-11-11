@@ -100,8 +100,9 @@ function loadSales() {
       || !Number.isFinite(Date.parse(sale.createdAt))
       || !Number.isInteger(sale.total)
       || sale.total < 0
-      || (sale.paymentMethod !== undefined && !["cash", "digital"].includes(sale.paymentMethod))
+      || (sale.paymentMethod !== undefined && !["cash", "digital", "mixed"].includes(sale.paymentMethod))
       || (sale.customerName !== undefined && (typeof sale.customerName !== "string" || sale.customerName.length > 80))
+      || (sale.paid !== undefined && typeof sale.paid !== "boolean")
       || !Array.isArray(sale.items)
       || sale.items.length === 0
       || sale.items.some((item) => (
@@ -192,6 +193,23 @@ let cartFeedbackTimer;
 
 function formatPrice(value) {
   return `$${money.format(value)}`;
+}
+
+function getSalePaymentAmounts(sale) {
+  if (Number.isInteger(sale.cashAmount) && Number.isInteger(sale.digitalAmount)) {
+    return { cashAmount: sale.cashAmount, digitalAmount: sale.digitalAmount };
+  }
+  if (sale.paymentMethod === "cash") return { cashAmount: sale.total, digitalAmount: 0 };
+  if (sale.paymentMethod === "digital") return { cashAmount: 0, digitalAmount: sale.total };
+  return { cashAmount: 0, digitalAmount: 0 };
+}
+
+function paymentMethodLabel(sale) {
+  const { cashAmount, digitalAmount } = getSalePaymentAmounts(sale);
+  if (cashAmount > 0 && digitalAmount > 0) return "Mixto";
+  if (digitalAmount > 0) return "Digital";
+  if (cashAmount > 0) return "Efectivo";
+  return sale.paymentMethod === "mixed" ? "Mixto" : "No especificado";
 }
 
 function escapeHtml(value) {
@@ -288,8 +306,8 @@ function renderSales() {
     sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0)
   ), 0);
   const revenue = sales.reduce((sum, sale) => sum + sale.total, 0);
-  const cashRevenue = sales.reduce((sum, sale) => sum + (sale.paymentMethod === "cash" ? sale.total : 0), 0);
-  const digitalRevenue = sales.reduce((sum, sale) => sum + (sale.paymentMethod === "digital" ? sale.total : 0), 0);
+  const cashRevenue = sales.reduce((sum, sale) => sum + getSalePaymentAmounts(sale).cashAmount, 0);
+  const digitalRevenue = sales.reduce((sum, sale) => sum + getSalePaymentAmounts(sale).digitalAmount, 0);
   document.querySelector("#units-sold").textContent = unitsSold;
   document.querySelector("#sales-count").textContent = sales.length;
   document.querySelector("#sales-revenue").textContent = formatPrice(revenue);
@@ -305,18 +323,21 @@ function renderSales() {
       return `${item.quantity} × ${product.name} (ID: ${product.id})`;
     }).join(", ");
     const saleUnits = sale.items.reduce((sum, item) => sum + item.quantity, 0);
-    const paymentMethod = sale.paymentMethod === "cash"
-      ? "Efectivo"
-      : sale.paymentMethod === "digital" ? "Digital" : "No especificado";
+    const paymentMethod = paymentMethodLabel(sale);
+    const { cashAmount, digitalAmount } = getSalePaymentAmounts(sale);
+    const paymentSummary = cashAmount > 0 || digitalAmount > 0
+      ? ` · Efectivo ${formatPrice(cashAmount)} · Digital ${formatPrice(digitalAmount)}`
+      : "";
     const customerName = typeof sale.customerName === "string" && sale.customerName.trim()
       ? sale.customerName.trim()
       : "Sin nombre";
     return `
       <article class="sales-history-row">
-        <div><strong>${escapeHtml(customerName)} · ${date} · ${paymentMethod}</strong><span>${itemSummary}</span></div>
+        <div><strong>${escapeHtml(customerName)} · ${date} · ${paymentMethod}${paymentSummary}</strong><span>${itemSummary}</span></div>
         <span>${saleUnits} ${saleUnits === 1 ? "cojín" : "cojines"}</span>
         <strong>${formatPrice(sale.total)}</strong>
-        <button class="sale-edit-button" type="button" data-edit-sale="${serverBackedStorage ? sale.id : index}" data-payment="${sale.paymentMethod || ""}" data-name="${escapeHtml(sale.customerName || "")}">Editar venta</button>
+        <label class="sale-paid-check"><input type="checkbox" data-paid-sale="${serverBackedStorage ? sale.id : index}" ${sale.paid === true ? "checked" : ""}> Pagada</label>
+        <button class="sale-edit-button" type="button" data-edit-sale="${serverBackedStorage ? sale.id : index}" data-payment="${cashAmount > 0 && digitalAmount > 0 ? "mixed" : sale.paymentMethod || ""}" data-name="${escapeHtml(sale.customerName || "")}" data-cash="${cashAmount}" data-digital="${digitalAmount}">Editar venta</button>
         <button class="sale-remove-button" type="button" data-delete-sale="${serverBackedStorage ? sale.id : index}">Eliminar venta</button>
       </article>`;
   }).join("") : `<p class="inventory-empty">Todavía no hay ventas registradas.</p>`;
@@ -348,6 +369,14 @@ function renderSaleDraft() {
   }).join("") : `<p class="inventory-empty">Agrega una o más referencias para preparar la venta.</p>`;
   salePromotion.textContent = promotionDescription(quantity);
   saleEstimate.textContent = formatPrice(totalPrice(quantity));
+  const salePaymentMethod = document.querySelector("#sale-payment-method")?.value;
+  if (salePaymentMethod === "cash") {
+    document.querySelector("#sale-cash-amount").value = String(totalPrice(quantity));
+    document.querySelector("#sale-digital-amount").value = "0";
+  } else if (salePaymentMethod === "digital") {
+    document.querySelector("#sale-cash-amount").value = "0";
+    document.querySelector("#sale-digital-amount").value = String(totalPrice(quantity));
+  }
   registerSaleButton.disabled = draftItems.length === 0;
 }
 
@@ -425,7 +454,7 @@ async function registerSale() {
   const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
   const paymentMethod = document.querySelector("#sale-payment-method").value;
   const customerName = document.querySelector("#sale-customer-name").value.trim();
-  if (!["cash", "digital"].includes(paymentMethod)) {
+  if (!["cash", "digital", "mixed"].includes(paymentMethod)) {
     setSaleStatus("Selecciona un método de pago válido.", true);
     renderSaleDraft();
     return;
@@ -434,11 +463,24 @@ async function registerSale() {
     setSaleStatus("Escribe el nombre de quien compra.", true);
     return;
   }
+  const saleTotal = totalPrice(quantity);
+  const enteredCash = Number(document.querySelector("#sale-cash-amount").value);
+  const enteredDigital = Number(document.querySelector("#sale-digital-amount").value);
+  const cashAmount = paymentMethod === "digital" ? 0 : paymentMethod === "cash" ? saleTotal : enteredCash;
+  const digitalAmount = paymentMethod === "cash" ? 0 : paymentMethod === "digital" ? saleTotal : enteredDigital;
+  if (!Number.isInteger(cashAmount) || !Number.isInteger(digitalAmount) || cashAmount < 0 || digitalAmount < 0) {
+    setSaleStatus("Los montos de pago deben ser números enteros.", true);
+    return;
+  }
+  if (cashAmount + digitalAmount !== saleTotal) {
+    setSaleStatus(`Efectivo + digital deben sumar ${formatPrice(saleTotal)}.`, true);
+    return;
+  }
   try {
     if (serverBackedStorage) {
       const state = await requestApi(new URL("sales", API_BASE), {
         method: "POST",
-        body: JSON.stringify({ items, paymentMethod, customerName })
+        body: JSON.stringify({ items, paymentMethod, customerName, cashAmount, digitalAmount })
       });
       updateVisibleInventory(state.inventory, state.sales);
       announceSalesChange();
@@ -448,7 +490,10 @@ async function registerSale() {
         items,
         total: totalPrice(quantity),
         paymentMethod,
-        customerName
+        customerName,
+        cashAmount,
+        digitalAmount,
+        paid: false
       }];
       saveLegacySales(nextSales);
       updateVisibleInventory(inventorySource, nextSales);
@@ -462,28 +507,20 @@ async function registerSale() {
   saleDraft.clear();
   renderSaleDraft();
   document.querySelector("#sale-customer-name").value = "";
+  document.querySelector("#sale-cash-amount").value = "0";
+  document.querySelector("#sale-digital-amount").value = "0";
   setSaleStatus(`Venta registrada: ${quantity} ${quantity === 1 ? "cojín" : "cojines"} por ${formatPrice(totalPrice(quantity))}.`);
   setAdminStatus(serverBackedStorage
     ? "Venta e inventario guardados automáticamente en sales.json e inventory.json."
     : "El servidor JSON no está activo; la venta solo se guardó en este navegador.");
 }
 
-async function editSalePayment(saleKey) {
-  const paymentMethod = document.querySelector("#edit-payment-method").value;
-  const customerName = document.querySelector("#edit-sale-name").value.trim();
-  if (!["cash", "digital"].includes(paymentMethod)) {
-    setSaleStatus("Selecciona efectivo o pago digital.", true);
-    return;
-  }
-  if (!customerName) {
-    setSaleStatus("Escribe el nombre de quien compra.", true);
-    return;
-  }
+async function setSalePaid(saleKey, paid) {
   try {
     if (serverBackedStorage) {
       const state = await requestApi(new URL(`sales/${encodeURIComponent(saleKey)}`, API_BASE), {
         method: "PATCH",
-        body: JSON.stringify({ paymentMethod, customerName })
+        body: JSON.stringify({ paid })
       });
       updateVisibleInventory(state.inventory, state.sales);
       announceSalesChange();
@@ -493,12 +530,72 @@ async function editSalePayment(saleKey) {
         throw new Error("No se encontró esa venta en el historial local.");
       }
       const nextSales = sales.map((sale, index) => (
-        index === saleIndex ? { ...sale, paymentMethod, customerName } : sale
+        index === saleIndex ? { ...sale, paid } : sale
       ));
       saveLegacySales(nextSales);
       updateVisibleInventory(inventorySource, nextSales);
     }
-    const label = paymentMethod === "cash" ? "Efectivo" : "Digital";
+    setAdminStatus(paid ? "Venta marcada como pagada." : "Venta marcada como pendiente de pago.");
+  } catch (error) {
+    setSaleStatus(`No se pudo actualizar el estado de pago: ${error.message}`, true);
+    renderSales();
+  }
+}
+
+async function editSalePayment(saleKey) {
+  const paymentMethod = document.querySelector("#edit-payment-method").value;
+  const customerName = document.querySelector("#edit-sale-name").value.trim();
+  if (!["cash", "digital", "mixed"].includes(paymentMethod)) {
+    setSaleStatus("Selecciona efectivo o pago digital.", true);
+    return;
+  }
+  if (!customerName) {
+    setSaleStatus("Escribe el nombre de quien compra.", true);
+    return;
+  }
+  const existingSale = serverBackedStorage
+    ? sales.find((sale) => sale.id === saleKey)
+    : sales[Number(saleKey)];
+  if (!existingSale) {
+    setSaleStatus("No se encontró esa venta.", true);
+    return;
+  }
+  const enteredCash = Number(document.querySelector("#edit-cash-amount").value);
+  const enteredDigital = Number(document.querySelector("#edit-digital-amount").value);
+  const cashAmount = paymentMethod === "digital"
+    ? 0
+    : paymentMethod === "cash" ? existingSale.total : enteredCash;
+  const digitalAmount = paymentMethod === "cash"
+    ? 0
+    : paymentMethod === "digital" ? existingSale.total : enteredDigital;
+  if (!Number.isInteger(cashAmount) || !Number.isInteger(digitalAmount) || cashAmount < 0 || digitalAmount < 0) {
+    setSaleStatus("Los montos de pago deben ser números enteros.", true);
+    return;
+  }
+  if (cashAmount + digitalAmount !== existingSale.total) {
+    setSaleStatus(`Efectivo + digital deben sumar ${formatPrice(existingSale.total)}.`, true);
+    return;
+  }
+  try {
+    if (serverBackedStorage) {
+      const state = await requestApi(new URL(`sales/${encodeURIComponent(saleKey)}`, API_BASE), {
+        method: "PATCH",
+        body: JSON.stringify({ paymentMethod, customerName, cashAmount, digitalAmount })
+      });
+      updateVisibleInventory(state.inventory, state.sales);
+      announceSalesChange();
+    } else {
+      const saleIndex = Number(saleKey);
+      if (!Number.isInteger(saleIndex) || !sales[saleIndex]) {
+        throw new Error("No se encontró esa venta en el historial local.");
+      }
+      const nextSales = sales.map((sale, index) => (
+        index === saleIndex ? { ...sale, paymentMethod, customerName, cashAmount, digitalAmount } : sale
+      ));
+      saveLegacySales(nextSales);
+      updateVisibleInventory(inventorySource, nextSales);
+    }
+    const label = paymentMethod === "mixed" ? "Mixto" : paymentMethod === "cash" ? "Efectivo" : "Digital";
     setSaleStatus(`Venta de ${customerName} actualizada: método de pago ${label}.`);
     setAdminStatus(serverBackedStorage
       ? "La venta se actualizó en sales.json."
@@ -648,6 +745,7 @@ function subscribeToSalesChanges(onRefreshError) {
 async function initializeAdmin() {
   document.querySelector("#add-sale-item").addEventListener("click", addSaleItem);
   registerSaleButton.addEventListener("click", registerSale);
+  document.querySelector("#sale-payment-method").addEventListener("change", renderSaleDraft);
   saleProductSelect.addEventListener("change", () => {
     saleQuantityInput.max = products.find((product) => product.id === saleProductSelect.value)?.stock || 1;
   });
@@ -662,13 +760,22 @@ async function initializeAdmin() {
     if (editButton) {
       editingSaleKey = editButton.dataset.editSale;
       const paymentSelect = document.querySelector("#edit-payment-method");
-      paymentSelect.value = editButton.dataset.payment === "digital" ? "digital" : "cash";
+      paymentSelect.value = ["cash", "digital", "mixed"].includes(editButton.dataset.payment)
+        ? editButton.dataset.payment
+        : "cash";
       document.querySelector("#edit-sale-name").value = editButton.dataset.name || "";
+      document.querySelector("#edit-cash-amount").value = editButton.dataset.cash || "0";
+      document.querySelector("#edit-digital-amount").value = editButton.dataset.digital || "0";
       document.querySelector("#edit-payment-dialog").showModal();
       return;
     }
     const button = event.target.closest("[data-delete-sale]");
     if (button) void deleteSale(button.dataset.deleteSale);
+  });
+  salesHistory.addEventListener("change", (event) => {
+    const paidCheckbox = event.target.closest("[data-paid-sale]");
+    if (!paidCheckbox) return;
+    void setSalePaid(paidCheckbox.dataset.paidSale, paidCheckbox.checked);
   });
   document.querySelector("#cancel-payment-edit").addEventListener("click", () => {
     editingSaleKey = null;

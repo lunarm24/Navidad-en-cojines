@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=sales-payment-method-7">
-  <script src="script.js?v=sales-payment-method-7" defer></script>
+  <link rel="stylesheet" href="styles.css?v=sales-payment-method-9">
+  <script src="script.js?v=sales-payment-method-9" defer></script>
 </head>
 <body data-page="admin">
   <div class="site-shell">
@@ -52,7 +52,14 @@
         <select id="sale-payment-method" class="payment-method-select">
           <option value="cash">Efectivo</option>
           <option value="digital">Digital (transferencia, Nequi, Daviplata, etc.)</option>
+          <option value="mixed">Mixto: efectivo + digital</option>
         </select>
+        <div class="payment-split-fields">
+          <label for="sale-cash-amount">Pagado en efectivo</label>
+          <input id="sale-cash-amount" type="number" min="0" step="1000" value="0">
+          <label for="sale-digital-amount">Pagado digital</label>
+          <input id="sale-digital-amount" type="number" min="0" step="1000" value="0">
+        </div>
         <label class="payment-method-label" for="sale-customer-name">Nombre de quien compra</label>
         <input id="sale-customer-name" class="payment-method-select" type="text" maxlength="80" autocomplete="name" placeholder="Nombre del cliente">
         <div id="sale-draft" class="sale-draft"></div>
@@ -83,7 +90,14 @@
           <select id="edit-payment-method" class="payment-method-select">
             <option value="cash">Efectivo</option>
             <option value="digital">Digital</option>
+            <option value="mixed">Mixto</option>
           </select>
+          <div class="payment-split-fields">
+            <label for="edit-cash-amount">Pagado en efectivo</label>
+            <input id="edit-cash-amount" type="number" min="0" step="1000" value="0">
+            <label for="edit-digital-amount">Pagado digital</label>
+            <input id="edit-digital-amount" type="number" min="0" step="1000" value="0">
+          </div>
           <div class="edit-payment-actions">
             <button id="cancel-payment-edit" class="sale-remove-button" type="button">Cancelar</button>
             <button class="admin-edit" type="submit">Guardar cambios</button>

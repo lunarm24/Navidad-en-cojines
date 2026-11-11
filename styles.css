@@ -451,6 +451,13 @@ h1 {
 
 .edit-payment-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 
+.payment-split-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-top: 12px; }
+.payment-split-fields label { align-self: end; color: var(--muted); font-size: .84rem; font-weight: 700; }
+.payment-split-fields input { min-height: 42px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; }
+
+.sale-paid-check { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; color: var(--muted); font-size: .82rem; font-weight: 700; }
+.sale-paid-check input { width: 18px; height: 18px; accent-color: var(--green); }
+
 .sale-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 16px 0 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 
 .sale-total p { margin: 0; color: var(--muted); font-size: .9rem; }
@@ -475,7 +482,7 @@ h1 {
 
 .sales-history { display: grid; }
 
-.sales-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto auto; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+.sales-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto auto auto; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); font-size: .88rem; }
 
 .sales-history-row > div { display: grid; gap: 4px; }
 
@@ -879,6 +886,7 @@ h1 {
 
   .sales-history-row .sale-edit-button { grid-column: 1 / -1; justify-self: start; }
   .sales-history-row .sale-remove-button { grid-column: 1 / -1; justify-self: start; }
+  .sales-history-row .sale-paid-check { grid-column: 1 / -1; }
 
   .cart-feedback { right: 14px; bottom: 18px; grid-template-columns: 76px minmax(0, 1fr); min-height: 112px; padding-right: 16px; }
 

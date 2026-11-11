@@ -65,7 +65,7 @@ def read_sales():
                 sale.get("paymentMethod") is not None
                 and (
                     not isinstance(sale["paymentMethod"], str)
-                    or sale["paymentMethod"] not in {"cash", "digital"}
+                    or sale["paymentMethod"] not in {"cash", "digital", "mixed"}
                 )
             )
             or (
@@ -74,6 +74,26 @@ def read_sales():
                     not isinstance(sale["customerName"], str)
                     or len(sale["customerName"]) > 80
                 )
+            )
+            or (
+                sale.get("cashAmount") is not None
+                and (
+                    not isinstance(sale["cashAmount"], int)
+                    or isinstance(sale["cashAmount"], bool)
+                    or sale["cashAmount"] < 0
+                )
+            )
+            or (
+                sale.get("digitalAmount") is not None
+                and (
+                    not isinstance(sale["digitalAmount"], int)
+                    or isinstance(sale["digitalAmount"], bool)
+                    or sale["digitalAmount"] < 0
+                )
+            )
+            or (
+                sale.get("paid") is not None
+                and not isinstance(sale["paid"], bool)
             )
             or not isinstance(sale.get("items"), list)
             or not sale["items"]
@@ -229,10 +249,25 @@ class StoreHandler(SimpleHTTPRequestHandler):
                             "createdAt": legacy_sale["createdAt"],
                             "items": items,
                             "total": legacy_sale["total"],
+                            "paid": legacy_sale["paid"]
+                            if isinstance(legacy_sale.get("paid"), bool)
+                            else False,
                             **(
                                 {"customerName": legacy_sale["customerName"].strip()}
                                 if isinstance(legacy_sale.get("customerName"), str)
                                 and legacy_sale["customerName"].strip()
+                                else {}
+                            ),
+                            **(
+                                {"cashAmount": legacy_sale["cashAmount"]}
+                                if isinstance(legacy_sale.get("cashAmount"), int)
+                                and not isinstance(legacy_sale["cashAmount"], bool)
+                                else {}
+                            ),
+                            **(
+                                {"digitalAmount": legacy_sale["digitalAmount"]}
+                                if isinstance(legacy_sale.get("digitalAmount"), int)
+                                and not isinstance(legacy_sale["digitalAmount"], bool)
                                 else {}
                             ),
                             **(
@@ -256,9 +291,20 @@ class StoreHandler(SimpleHTTPRequestHandler):
 
                 items = clean_sale_items(body.get("items") if isinstance(body, dict) else None)
                 payment_method = body.get("paymentMethod") if isinstance(body, dict) else None
-                if not isinstance(payment_method, str) or payment_method not in {"cash", "digital"}:
-                    raise RequestError(400, "Selecciona efectivo o pago digital.")
+                if not isinstance(payment_method, str) or payment_method not in {"cash", "digital", "mixed"}:
+                    raise RequestError(400, "Selecciona efectivo, pago digital o pago mixto.")
                 customer_name = clean_customer_name(body.get("customerName") if isinstance(body, dict) else None)
+                cash_amount = body.get("cashAmount")
+                digital_amount = body.get("digitalAmount")
+                quantity = sum(item["quantity"] for item in items)
+                sale_total = sale_price(quantity)
+                if (
+                    not isinstance(cash_amount, int) or isinstance(cash_amount, bool)
+                    or not isinstance(digital_amount, int) or isinstance(digital_amount, bool)
+                    or cash_amount < 0 or digital_amount < 0
+                    or cash_amount + digital_amount != sale_total
+                ):
+                    raise RequestError(400, "Efectivo y digital deben sumar el total de la venta.")
                 for item in items:
                     product_id = item["id"]
                     if inventory[product_id] < item["quantity"]:
@@ -269,7 +315,6 @@ class StoreHandler(SimpleHTTPRequestHandler):
 
                 for item in items:
                     inventory[item["id"]] -= item["quantity"]
-                quantity = sum(item["quantity"] for item in items)
                 sales.append({
                     "id": str(uuid.uuid4()),
                     "createdAt": datetime.now(timezone.utc).isoformat(),
@@ -277,6 +322,9 @@ class StoreHandler(SimpleHTTPRequestHandler):
                     "total": sale_price(quantity),
                     "paymentMethod": payment_method,
                     "customerName": customer_name,
+                    "cashAmount": cash_amount,
+                    "digitalAmount": digital_amount,
+                    "paid": False,
                 })
                 write_json_files(inventory, sales)
                 self.send_json(201, {"inventory": inventory, "sales": sales})
@@ -304,9 +352,8 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 raise RequestError(400, "La solicitud debe contener JSON válido.") from error
 
             payment_method = body.get("paymentMethod") if isinstance(body, dict) else None
-            if payment_method not in {"cash", "digital"}:
-                raise RequestError(400, "Selecciona efectivo o pago digital.")
-            customer_name = clean_customer_name(body.get("customerName") if isinstance(body, dict) else None)
+            customer_name = body.get("customerName") if isinstance(body, dict) else None
+            paid = body.get("paid") if isinstance(body, dict) else None
 
             with STATE_LOCK:
                 inventory = read_inventory()
@@ -314,8 +361,27 @@ class StoreHandler(SimpleHTTPRequestHandler):
                 sale = next((item for item in sales if item.get("id") == sale_id), None)
                 if sale is None:
                     raise RequestError(404, "No se encontró esa venta.")
-                sale["paymentMethod"] = payment_method
-                sale["customerName"] = customer_name
+                if paid is not None:
+                    if not isinstance(paid, bool):
+                        raise RequestError(400, "El estado pagada debe ser verdadero o falso.")
+                    sale["paid"] = paid
+                if customer_name is not None or payment_method is not None:
+                    if payment_method not in {"cash", "digital", "mixed"}:
+                        raise RequestError(400, "Selecciona efectivo, pago digital o pago mixto.")
+                    customer_name = clean_customer_name(customer_name)
+                    cash_amount = body.get("cashAmount")
+                    digital_amount = body.get("digitalAmount")
+                    if (
+                        not isinstance(cash_amount, int) or isinstance(cash_amount, bool)
+                        or not isinstance(digital_amount, int) or isinstance(digital_amount, bool)
+                        or cash_amount < 0 or digital_amount < 0
+                        or cash_amount + digital_amount != sale["total"]
+                    ):
+                        raise RequestError(400, "Efectivo y digital deben sumar el total de la venta.")
+                    sale["paymentMethod"] = payment_method
+                    sale["customerName"] = customer_name
+                    sale["cashAmount"] = cash_amount
+                    sale["digitalAmount"] = digital_amount
                 write_json_files(inventory, sales)
                 self.send_json(200, {"inventory": inventory, "sales": sales})
         except (ValueError, RequestError) as error:
