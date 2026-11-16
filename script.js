@@ -308,11 +308,19 @@ function renderSales() {
   const revenue = sales.reduce((sum, sale) => sum + sale.total, 0);
   const cashRevenue = sales.reduce((sum, sale) => sum + getSalePaymentAmounts(sale).cashAmount, 0);
   const digitalRevenue = sales.reduce((sum, sale) => sum + getSalePaymentAmounts(sale).digitalAmount, 0);
+  const paidCashRevenue = sales.reduce((sum, sale) => (
+    sale.paid === true ? sum + getSalePaymentAmounts(sale).cashAmount : sum
+  ), 0);
+  const paidDigitalRevenue = sales.reduce((sum, sale) => (
+    sale.paid === true ? sum + getSalePaymentAmounts(sale).digitalAmount : sum
+  ), 0);
   document.querySelector("#units-sold").textContent = unitsSold;
   document.querySelector("#sales-count").textContent = sales.length;
   document.querySelector("#sales-revenue").textContent = formatPrice(revenue);
   document.querySelector("#cash-revenue").textContent = formatPrice(cashRevenue);
   document.querySelector("#digital-revenue").textContent = formatPrice(digitalRevenue);
+  document.querySelector("#paid-cash-revenue").textContent = formatPrice(paidCashRevenue);
+  document.querySelector("#paid-digital-revenue").textContent = formatPrice(paidDigitalRevenue);
 
   const orderedSales = sales.map((sale, index) => ({ sale, index })).reverse();
   salesHistory.innerHTML = orderedSales.length ? orderedSales.map(({ sale, index }) => {

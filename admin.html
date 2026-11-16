@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=sales-payment-method-9">
-  <script src="script.js?v=sales-payment-method-9" defer></script>
+  <link rel="stylesheet" href="styles.css?v=sales-paid-totals-12">
+  <script src="script.js?v=sales-paid-totals-12" defer></script>
 </head>
 <body data-page="admin">
   <div class="site-shell">
@@ -76,6 +76,16 @@
         <p><span>Total vendido</span><strong id="sales-revenue">$0</strong></p>
         <p><span>Recibido en efectivo</span><strong id="cash-revenue">$0</strong></p>
         <p><span>Recibido digital</span><strong id="digital-revenue">$0</strong></p>
+      </section>
+      <section class="paid-summary-panel" aria-labelledby="paid-summary-title">
+        <div class="paid-summary-heading">
+          <h2 id="paid-summary-title">Pagos confirmados</h2>
+          <p>Solo incluye ventas marcadas como pagadas.</p>
+        </div>
+        <div class="paid-summary">
+          <p><span>Pagado en efectivo</span><strong id="paid-cash-revenue">$0</strong></p>
+          <p><span>Pagado digital</span><strong id="paid-digital-revenue">$0</strong></p>
+        </div>
       </section>
       <section class="sales-history-panel" aria-labelledby="sales-history-title">
         <h2 id="sales-history-title">Historial de ventas</h2>
